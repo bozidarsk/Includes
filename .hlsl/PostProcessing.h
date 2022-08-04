@@ -5,7 +5,7 @@
 float3 luminance(float3 color) { return dot(color, float3(0.299, 0.587, 0.114)); }
 float3 Exposure(float3 color, float exposure) { return max(0, color * exposure); }
 float3 Contrast(float3 color, float contrast, float brightness) { return max(0, contrast * (color - 0.5) + 0.5 + brightness); }
-float3 Saturation(float3 color, float saturation) { return max(0, float3(lerp(luminance(color.rgb), color.rgb, saturation), color.a)); }
+float3 Saturation(float3 color, float saturation) { return max(0, lerp(luminance(color), color, saturation)); }
 float3 Gamma(float3 color, float gamma) { return max(0, pow(color, gamma)); }
 float3 ColorFiltering(float3 color, float3 colorFiltering) { return max(0, color * colorFiltering); }
 
@@ -78,7 +78,7 @@ float3 ToneMap(float3 color)
     return mul(output, a / b);
 }
 
-float Calculate01Depth(sampler2D depthTexture, float2 coords) { return Linear01Depth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, coords)); }
+float Calculate01Depth(sampler2D depthTexture, float2 coords) { return Linear01Depth(SAMPLE_DEPTH_TEXTURE(depthTexture, coords)); }
 float CalculateViewDistance(float depth) { return _ProjectionParams.z * depth; }
 
 #endif
