@@ -182,36 +182,71 @@ namespace Utils.Collections
         }
     }
 
+    public class ObjectMesh 
+	{
+		public int vertexCount { get { return vertices.Count; } }
+		public Mesh mesh 
+		{
+			get 
+			{
+				Mesh mesh = new Mesh();
+				mesh.indexFormat = IndexFormat.UInt32;
+				mesh.vertices = vertices.ToArray();
+				mesh.triangles = triangles.ToArray();
+				mesh.uv = uvs.ToArray();
+				mesh.RecalculateNormals();
+				mesh.Optimize();
+				return mesh;
+			}
+		}
+
+		public List<Vector3> vertices;
+		public List<int> triangles;
+		public List<Vector2> uvs;
+
+		public virtual void Clear() 
+		{
+			vertices = new List<Vector3>();
+			triangles = new List<int>();
+			uvs = new List<Vector2>();
+		}
+
+		public void Add(params Vector3[] x) { for (int i = 0; i < x.Length; i++) { vertices.Add(x[i]); } }
+		public void Add(params int[] x) { for (int i = 0; i < x.Length; i++) { triangles.Add(x[i]); } }
+		public void Add(params Vector2[] x) { for (int i = 0; i < x.Length; i++) { uvs.Add(x[i]); } }
+		public void Add(params Mesh[] x) 
+		{
+			for (int i = 0; i < x.Length; i++) 
+			{
+				Add(x[i].vertices);
+				Add(x[i].triangles);
+				Add(x[i].uv);
+			}
+		}
+
+		public ObjectMesh() 
+		{
+			this.vertices = new List<Vector3>();
+			this.triangles = new List<int>();
+			this.uvs = new List<Vector2>();
+		}
+	}
+
     public class Mesh 
     {
 		public Vector3[] normals { set; get; }
 		public Vector3[] vertices { set; get; }
-		public Vector2[] uvs { set; get; }
+		public Vector2[] uv { set; get; }
 		public int[] triangles { set; get; }
+		public IndexFormat indexFormat;
+		public void RecalculateNormals() {}
+		public void Optimize() {}
     	public Mesh() {}
     }
 
-	public class List<T> 
-	{
-		public List<T>() 
-		{
-			throw new NotImplemented();
-		}
-	}
-
-	public class Dictionary<TKey, TValue> 
-	{
-		public Dictionary<TKey, TValue>() 
-		{
-			throw new NotImplemented();
-		}
-	}
-
-	public class Tree<T> 
-	{
-		public List<T>() 
-		{
-			throw new NotImplemented();
-		}
-	}
+    public enum IndexFormat 
+    {
+    	UInt16,
+    	UInt32
+    }
 }
