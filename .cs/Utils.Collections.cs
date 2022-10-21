@@ -18,60 +18,12 @@ using Utils.Web;
 
 namespace Utils.Collections 
 {
+	#if !UNITY
 	public class Vector3 
     {
         public float x { set; get; }
         public float y { set; get; }
         public float z { set; get; }
-
-        public bool Contains(List<Vector3> list) 
-		{
-			int i = 0;
-			while (i < list.Count) 
-			{
-				if (list[i].x == x && list[i].y == y && list[i].z == z) { return true; }
-				i++;
-			}
-
-			return false;
-		}
-
-		public int IndexOf(List<Vector3> list) 
-		{
-			int i = 0;
-			while (i < list.Count) 
-			{
-				if (list[i].x == x && list[i].y == y && list[i].z == z) { return i; }
-				i++;
-			}
-
-			return -1;
-		}
-
-		public int LastIndexOf(List<Vector3> list) 
-		{
-			int i = list.Count;
-			while (i >= 0) 
-			{
-				if (list[i].x == x && list[i].y == y && list[i].z == z) { return i; }
-				i--;
-			}
-
-			return -1;
-		}
-
-		public int CountInList(List<Vector3> list) 
-		{
-			int i = 0;
-			int count = 0;
-			while (i < list.Count) 
-			{
-				if (list[i].x == x && list[i].y == y && list[i].z == z) { count++; }
-				i++;
-			}
-
-			return count;
-		}
 
         public static readonly Vector3 zero = new Vector3(0, 0, 0);
         public static readonly Vector3 one = new Vector3(1, 1, 1);
@@ -113,43 +65,6 @@ namespace Utils.Collections
         public float x { set; get; }
         public float y { set; get; }
 
-		public int IndexOf(List<Vector3> list) 
-		{
-			int i = 0;
-			while (i < list.Count) 
-			{
-				if (list[i].x == x && list[i].y == y) { return i; }
-				i++;
-			}
-
-			return -1;
-		}
-
-		public int LastIndexOf(List<Vector3> list) 
-		{
-			int i = list.Count;
-			while (i >= 0) 
-			{
-				if (list[i].x == x && list[i].y == y) { return i; }
-				i--;
-			}
-
-			return -1;
-		}
-
-		public int CountInList(List<Vector2> list) 
-		{
-			int i = 0;
-			int count = 0;
-			while (i < list.Count) 
-			{
-				if (list[i].x == x && list[i].y == y) { count++; }
-				i++;
-			}
-
-			return count;
-		}
-
         public static readonly Vector2 zero = new Vector2(0, 0);
         public static readonly Vector2 one = new Vector2(1, 1);
         public static readonly Vector2 down = new Vector2(0, -1f);
@@ -181,6 +96,7 @@ namespace Utils.Collections
             this.y = y;
         }
     }
+    #endif
 
     public class ObjectMesh 
 	{
@@ -232,6 +148,7 @@ namespace Utils.Collections
 		}
 	}
 
+	#if !UNITY
     public class Mesh 
     {
 		public Vector3[] normals { set; get; }
@@ -249,4 +166,5 @@ namespace Utils.Collections
     	UInt16,
     	UInt32
     }
+    #endif
 }

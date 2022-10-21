@@ -21,14 +21,14 @@ namespace Utils
     public static class Tools 
     {
         /*
-        [System.Runtime.InteropServices.DllImport("user32.dll")] // in class main
-		static extern bool ShowWindow(IntPtr hWnd, int nCmdShow); // in clas main
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+		static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
 		ShowWindow(System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle, 0);
 		*/
 
 		[DllImport("user32.dll", CharSet = CharSet.Auto)]
-		public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+		private static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
 
 		public static void SetWallpaper(Bitmap bitmap)
 		{
@@ -97,53 +97,6 @@ namespace Utils
 		    SystemParametersInfo(0x14, 0, tempPath, 0x3);
 		}
 
-	    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-	    [DllImport("user32.dll")] public static extern IntPtr GetDesktopWindow();
-	    [DllImport("user32.dll")] public static extern IntPtr GetShellWindow();
-	    [DllImport("user32.dll", SetLastError = true)] public static extern int GetWindowRect(IntPtr hwnd, ref RECT rc);
-
-	    public static bool IsFocusedOnDesktop() 
-	    {
-	    	IntPtr desktopHandle = GetDesktopWindow();
-	    	IntPtr targetHandle = GetShellWindow();
-
-			RECT appBounds = new RECT();
-			Rectangle screenBounds;
-			IntPtr hWnd;
-
-			hWnd = GetForegroundWindow();
-			if (hWnd != null && !hWnd.Equals(IntPtr.Zero))
-			{
-			    if (!(hWnd.Equals(desktopHandle) || hWnd.Equals(targetHandle)))
-			    {
-			        GetWindowRect(hWnd, ref appBounds);
-			        screenBounds = Screen.FromHandle(hWnd).Bounds;
-			        if ((appBounds.Bottom - appBounds.Top) == screenBounds.Height && (appBounds.Right - appBounds.Left) == screenBounds.Width) 
-			        { return true; }
-			    }
-			}
-
-			return false;
-	    }
-
-	    public static bool IsSomethingFullscreen() 
-	    {
-	    	Screen screen = Screen.PrimaryScreen;
-	    	RECT rect = new RECT();
-	        GetWindowRect(new HandleRef(null, GetForegroundWindow()).Handle, ref rect);
-	        Rectangle box = new Rectangle(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
-	        return box.Contains(screen.Bounds) || screen.Bounds.Contains(box); 
-	    }
-
-	    [StructLayout(LayoutKind.Sequential)]
-	    public struct RECT
-	    {
-	        public int Left;
-	        public int Top;
-	        public int Right;
-	        public int Bottom;
-	    }
-
 		public static string GetCurrentFilePath() { return new StackTrace(true).GetFrame(0).GetFileName(); }
 
         public static void ClearLastLine() 
@@ -157,60 +110,21 @@ namespace Utils
 
         public static void CMD(string command) 
         {
-        	//Process.Start("cmd.exe", "/C " + command);
-        	var cmd = new Process();
-		    cmd.StartInfo = new ProcessStartInfo("C:\\Windows\\System32\\cmd.exe", command) 
-			{
-				UseShellExecute = false
-			};
-
-		    cmd.Start();
-		    cmd.WaitForExit();
+		    Process proccess = new Process();
+		    proccess.StartInfo = new ProcessStartInfo("C:\\Windows\\System32\\cmd.exe", command);
+		    proccess.StartInfo.UseShellExecute = false;
+		    proccess.Start();
+		    proccess.WaitForExit();
         }
 
         public static void StartEXE(string path, string args) 
         {
-        	//Process.Start("cmd.exe", "/C " + path + " " + args);
-        	var cmd = new Process();
-		    cmd.StartInfo = new ProcessStartInfo(path, args) 
-			{
-				UseShellExecute = false
-			};
-
-		    cmd.Start();
-		    cmd.WaitForExit();
+        	Process proccess = new Process();
+		    proccess.StartInfo = new ProcessStartInfo(path, args);
+		    proccess.StartInfo.UseShellExecute = false;
+		    proccess.Start();
+		    proccess.WaitForExit();
         }
-
-        public static void ColorWriteLine(string input) { ColorWrite(input + "\n"); }
-		public static void ColorWrite(string input) 
-		{
-			/*
-              0 = foreground color, 1 = backgroun color
-			  |the actual color from Console.Color
-			  ||indicates a color change
-			  ||||
-			\x07ff
-			*/
-
-			int i = 0;
-			int color = 7;
-			bool useBackground = false;
-
-			while (i < input.Length) 
-			{
-				int n = (BitConverter.GetBytes(input[i])[1] << 8) + BitConverter.GetBytes(input[i])[0];
-				if ((n & 0xff) << 8 == 0xff00) 
-				{
-					color = (n >> 8) & 0xf;
-					useBackground = (((n >> 8) & 0x10) >> 4) == 1;
-					i++;
-				}
-
-				if (!useBackground) { Console.ForegroundColor = (System.ConsoleColor)color; }
-				else { Console.BackgroundColor = (System.ConsoleColor)color; }
-				Console.Write(input[i++]);
-			}
-		}
 
 		public static string FormatDirectory(string input) 
 		{
@@ -233,34 +147,6 @@ namespace Utils
 			for (int i = 0; i < newFolders.Count; i++) { output += newFolders[i] + "\\"; }
 			return output.TrimEnd('\\');
 		}
-
-
-        // copy paste in .cs Main() file
-        /*
-        static List<int> usedRandom = new List<int>();
-        public static int Random(int start, int end) 
-        {
-            System.Random random = new System.Random();
-            int _new = start;
-            int i = 0;
-
-            usedRandom.Add(start - 1);
-            while (i < usedRandom.Count) 
-            {
-                _new = random.Next(start, end);
-                if (usedRandom.IndexOf(_new) <= -1) 
-                {
-                    usedRandom.Add(_new);
-                    break;
-                }
-
-                i++;
-            }
-
-            usedRandom.Remove(start - 1);
-            return _new;
-        }
-        */
 
         public class Timer 
         {
@@ -285,57 +171,88 @@ namespace Utils
 
 			public Timer(int delay) { this.delay = delay; done = true; }
         }
-
-        public class ConsoleColor 
-		{
-			public static readonly string BlackF       = "\x00ff";
-			public static readonly string BlueF        = "\x09ff";
-			public static readonly string CyanF        = "\x0bff";
-			public static readonly string DarkBlueF    = "\x01ff";
-			public static readonly string DarkCyanF    = "\x03ff";
-			public static readonly string DarkGrayF    = "\x08ff";
-			public static readonly string DarkGreenF   = "\x02ff";
-			public static readonly string DarkMagentaF = "\x05ff";
-			public static readonly string DarkRedF     = "\x04ff";
-			public static readonly string DarkYellowF  = "\x06ff";
-			public static readonly string GrayF        = "\x07ff";
-			public static readonly string GreenF       = "\x0aff";
-			public static readonly string MagentaF     = "\x0dff";
-			public static readonly string RedF         = "\x0cff";
-			public static readonly string WhiteF       = "\x0fff";
-			public static readonly string YellowF      = "\x0eff";
-
-			public static readonly string BlackB       = "\x10ff";
-			public static readonly string BlueB        = "\x19ff";
-			public static readonly string CyanB        = "\x1bff";
-			public static readonly string DarkBlueB    = "\x11ff";
-			public static readonly string DarkCyanB    = "\x13ff";
-			public static readonly string DarkGrayB    = "\x18ff";
-			public static readonly string DarkGreenB   = "\x12ff";
-			public static readonly string DarkMagentaB = "\x15ff";
-			public static readonly string DarkRedB     = "\x14ff";
-			public static readonly string DarkYellowB  = "\x16ff";
-			public static readonly string GrayB        = "\x17ff";
-			public static readonly string GreenB       = "\x1aff";
-			public static readonly string MagentaB     = "\x1dff";
-			public static readonly string RedB         = "\x1cff";
-			public static readonly string WhiteB       = "\x1fff";
-			public static readonly string YellowB      = "\x1eff";
-		}
     }
+
+    public class ColorConsole 
+	{
+		public static readonly string BlackF       = "\x00ff";
+		public static readonly string BlueF        = "\x09ff";
+		public static readonly string CyanF        = "\x0bff";
+		public static readonly string DarkBlueF    = "\x01ff";
+		public static readonly string DarkCyanF    = "\x03ff";
+		public static readonly string DarkGrayF    = "\x08ff";
+		public static readonly string DarkGreenF   = "\x02ff";
+		public static readonly string DarkMagentaF = "\x05ff";
+		public static readonly string DarkRedF     = "\x04ff";
+		public static readonly string DarkYellowF  = "\x06ff";
+		public static readonly string GrayF        = "\x07ff";
+		public static readonly string GreenF       = "\x0aff";
+		public static readonly string MagentaF     = "\x0dff";
+		public static readonly string RedF         = "\x0cff";
+		public static readonly string WhiteF       = "\x0fff";
+		public static readonly string YellowF      = "\x0eff";
+
+		public static readonly string BlackB       = "\x10ff";
+		public static readonly string BlueB        = "\x19ff";
+		public static readonly string CyanB        = "\x1bff";
+		public static readonly string DarkBlueB    = "\x11ff";
+		public static readonly string DarkCyanB    = "\x13ff";
+		public static readonly string DarkGrayB    = "\x18ff";
+		public static readonly string DarkGreenB   = "\x12ff";
+		public static readonly string DarkMagentaB = "\x15ff";
+		public static readonly string DarkRedB     = "\x14ff";
+		public static readonly string DarkYellowB  = "\x16ff";
+		public static readonly string GrayB        = "\x17ff";
+		public static readonly string GreenB       = "\x1aff";
+		public static readonly string MagentaB     = "\x1dff";
+		public static readonly string RedB         = "\x1cff";
+		public static readonly string WhiteB       = "\x1fff";
+		public static readonly string YellowB      = "\x1eff";
+
+		public static void WriteLine(string input) { ColorConsole.Write(input + "\n"); }
+		public static void Write(string input) 
+		{
+			/*
+              0 = foreground color, 1 = backgroun color
+			  |the actual color from System.Console.Color
+			  ||indicates a color change
+			  ||||
+			\x07ff
+			*/
+
+			int i = 0;
+			int color = 7;
+			bool useBackground = false;
+
+			while (i < input.Length) 
+			{
+				int n = (BitConverter.GetBytes(input[i])[1] << 8) + BitConverter.GetBytes(input[i])[0];
+				if ((n & 0xff) << 8 == 0xff00) 
+				{
+					color = (n >> 8) & 0xf;
+					useBackground = (((n >> 8) & 0x10) >> 4) == 1;
+					i++;
+				}
+
+				if (!useBackground) { System.Console.ForegroundColor = (System.ConsoleColor)color; }
+				else { System.Console.BackgroundColor = (System.ConsoleColor)color; }
+				System.Console.Write(input[i++]);
+			}
+		}
+	}
 
     public static class Format 
     {
     	public static string To1Decimal(float num) 
 		{
-			string output = System.Convert.ToString(Math.Round((double)num, 1));
+			string output = Math.Round(num, 1).ToString();
 			output = (output.IndexOf(".") <= -1) ? output + ".0" : output;
 			return output;
 		}
 
 		public static string To2Decimals(float num) 
 		{
-			string output = System.Convert.ToString(Math.Round((double)num, 2));
+			string output = Math.Round(num, 2).ToString();
 			output = (output.IndexOf(".") < 0) ? output + ".00" : output;
 			output = (output.IndexOf(".") == output.Length - 2) ? output + "0" : output;
 			return output;
@@ -343,7 +260,7 @@ namespace Utils
 
 		public static string To3Decimals(float num) 
 		{
-			string output = System.Convert.ToString(Math.Round((double)num, 3));
+			string output = Math.Round(num, 3).ToString();
 			output = (output.IndexOf(".") < 0) ? output + ".000" : output;
 			output = (output.IndexOf(".") == output.Length - 2) ? output + "00" : output;
 			output = (output.IndexOf(".") == output.Length - 3) ? output + "0" : output;
@@ -360,7 +277,7 @@ namespace Utils
 			hex = hex.ToLower();
 			while (i > -1) 
 			{
-				sum += Array.IndexOf(hexBy1, hex[i]) * (int)Math.Pow(16, pow);
+				sum += Array.IndexOf(hexBy1, hex[i]) * (int)System.Math.Pow(16, pow);
 				pow++;
 				i--;
 			}
@@ -371,13 +288,13 @@ namespace Utils
 		public static string DecimalToHex(int dec) 
 		{
 			string[] hexBy1 = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f" };
-			int num = (int)Math.Floor((double)dec / 16);
+			int num = (int)System.Math.Floor((double)dec / 16);
 			string hex = hexBy1[dec % 16];
 
 			while (num > 0) 
 			{
 				hex = hexBy1[num % 16] + hex;
-				num = (int)Math.Floor((double)num / 16);
+				num = (int)System.Math.Floor((double)num / 16);
 			}
 
 			return hex;
@@ -402,24 +319,24 @@ namespace Utils
 
 		public static string DecimalToBinary(int dec) 
 		{
-			int num = (int)Math.Floor((double)dec / 2);
+			int num = (int)System.Math.Floor((double)dec / 2);
 			string bin = ((dec % 2 == 0) ? "0" : "1");
 
 			while (num > 0) 
 			{
 				bin = ((num % 2 == 0) ? 0 : 1) + bin;
-				num = (int)Math.Floor((double)num / 2);
+				num = (int)System.Math.Floor((double)num / 2);
 			}
 
 			return bin;
 		}
 
-		public static float itof(int num) { return float.Parse(System.Convert.ToString(num)); }
+		public static float itof(int num) { return float.Parse(num.ToString()); }
 		public static int ftoi(float num) { return System.Convert.ToInt32(num); }
 		public static float stof(string num) { return float.Parse(num); }
-		public static string ftos(float num) { return System.Convert.ToString(num); }
+		public static string ftos(float num) { return num.ToString(); }
 		public static int stoi(string num) { return System.Convert.ToInt32(num); }
-		public static string itos(int num) { return System.Convert.ToString(num); }
+		public static string itos(int num) { return num.ToString(); }
 
 		public static float ToMinutes(string hoursAndMinutes) 
 		{
@@ -440,8 +357,8 @@ namespace Utils
 		public static string ToHoursAndMinutes(float minutes) 
 		{
 			if (minutes < 0) { return "0:00"; }
-			float newHours = (float)Math.Floor((double)(minutes / 60f));
-			float newMinutes = (float)Math.Abs((double)(minutes - (newHours * 60)));
+			float newHours = Math.Floor(minutes / 60f);
+			float newMinutes = Math.Abs(minutes - (newHours * 60f));
 			string newMinutess = System.Convert.ToString(newMinutes);
 			return System.Convert.ToString(newHours) + ":" + ((newMinutess.Length == 1) ? ("0" + newMinutess) : newMinutess);
 		}
@@ -450,8 +367,8 @@ namespace Utils
 		{
 			float minutesf = float.Parse(minutes);
 			if (minutes == "" || minutes == " " || minutesf < 0) { return "0:00"; }
-			float newHours = (float)Math.Floor((double)(minutesf / 60f));
-			float newMinutes = (float)Math.Abs((double)(minutesf - (newHours * 60)));
+			float newHours = Math.Floor(minutesf / 60f);
+			float newMinutes = Math.Abs(minutesf - (newHours * 60f));
 			string newMinutess = System.Convert.ToString(newMinutes);
 			return System.Convert.ToString(newHours) + ":" + ((newMinutess.Length == 1) ? ("0" + newMinutess) : newMinutess);
 		}
@@ -459,8 +376,8 @@ namespace Utils
 		public static string ToMinutesAndSeconds(float seconds) 
 		{
 			if (seconds < 0) { return "0:00"; }
-			float newMinutes = (float)Math.Floor((double)(seconds / 60f));
-			float newSeconds = (float)Math.Abs((double)(seconds - (newMinutes * 60)));
+			float newMinutes = Math.Floor(seconds / 60f);
+			float newSeconds = Math.Abs(seconds - (newMinutes * 60f));
 			string newSecondss = System.Convert.ToString(newSeconds);
 			return System.Convert.ToString(newMinutes) + ":" + ((newSecondss.Length == 1) ? ("0" + newSecondss) : newSecondss);
 		}
@@ -469,14 +386,14 @@ namespace Utils
 		{
 			float secondsf = float.Parse(seconds);
 			if (seconds == "" || seconds == " " || secondsf < 0) { return "0:00"; }
-			float newMinutes = (float)Math.Floor((double)(secondsf / 60f));
-			float newSeconds = (float)Math.Abs((double)(secondsf - (newMinutes * 60)));
+			float newMinutes = Math.Floor(secondsf / 60f);
+			float newSeconds = Math.Abs(secondsf - (newMinutes * 60f));
 			string newSecondss = System.Convert.ToString(newSeconds);
 			return System.Convert.ToString(newMinutes) + ":" + ((newSecondss.Length == 1) ? ("0" + newSecondss) : newSecondss);
 		}
     }
 
-    public static class Math2 
+    public static class Math 
     {
         public static float PI { get { return 3.1415926535897932384626433832795f; } }
         public static float TAU { get { return 6.283185307179586476925286766559f; } }
@@ -486,22 +403,24 @@ namespace Utils
         public static float RAD2DEG { get { return 57.295779513082320876798154814105f; } }
         public static float EPSILON { get { return 0.0001f; } }
 
-        public static float e(float x) { return (float)Math.Pow((double)E, (double)x); }
-	    public static float Sqrt(float x) { return (float)Math.Sqrt((double)x); }
+        public static float e(float x) { return (float)System.Math.Pow((double)E, (double)x); }
+        public static float Round(float x) { return Round(x, 0); }
+        public static float Round(float x, int place) { return (float)System.Math.Round((double)x, place); }
+	    public static float Sqrt(float x) { return (float)System.Math.Sqrt((double)x); }
 	    public static float Abs(float x) { return (x < 0f) ? x * -1f : x; }
-	    public static float Ceiling(float x) { return (float)Math.Ceiling((double)x); }
-	    public static float Floor(float x) { return (float)Math.Floor((double)x); }
+	    public static float Ceiling(float x) { return (float)System.Math.Ceiling((double)x); }
+	    public static float Floor(float x) { return (float)System.Math.Floor((double)x); }
 	    public static float Max(float a, float b) { return (a > b) ? a : b; }
 	    public static float Min(float a, float b) { return (a < b) ? a : b; }
-	    public static float Sin(float x) { return (float)Math.Sin((double)x); }
-	    public static float Cos(float x) { return (float)Math.Cos((double)x); }
-	    public static float Tan(float x) { return (float)Math.Tan((double)x); }
-	    public static float Asin(float x) { return (float)Math.Asin((double)x); }
-	    public static float Acos(float x) { return (float)Math.Acos((double)x); }
-	    public static float Atan(float x) { return (float)Math.Atan((double)x); }
-	    public static float Atan2(float y, float x) { return (float)Math.Atan2((double)y, (double)x); }
-	    public static float Log(float x) { return (float)Math.Log((double)x); }
-	    public static float Log(float x, float a) { return (float)Math.Log((double)x, (double)a); }
+	    public static float Sin(float x) { return (float)System.Math.Sin((double)x); }
+	    public static float Cos(float x) { return (float)System.Math.Cos((double)x); }
+	    public static float Tan(float x) { return (float)System.Math.Tan((double)x); }
+	    public static float Asin(float x) { return (float)System.Math.Asin((double)x); }
+	    public static float Acos(float x) { return (float)System.Math.Acos((double)x); }
+	    public static float Atan(float x) { return (float)System.Math.Atan((double)x); }
+	    public static float Atan2(float y, float x) { return (float)System.Math.Atan2((double)y, (double)x); }
+	    public static float Log(float x) { return (float)System.Math.Log((double)x); }
+	    public static float Log(float x, float a) { return (float)System.Math.Log((double)x, (double)a); }
 	    public static float Clamp(float a, float b, float x) { return Max(a, Min(x, b)); }
 	    public static Vector3 Clamp(Vector3 a, Vector3 b, Vector3 x) { return (Distance(a, b) < Distance(a, x)) ? b : ((Distance(a, b) < Distance(b, x)) ? a : x); }
 	    public static Vector2 Clamp(Vector2 a, Vector2 b, Vector2 x) { return (Distance(a, b) < Distance(a, x)) ? b : ((Distance(a, b) < Distance(b, x)) ? a : x); }
@@ -577,7 +496,7 @@ namespace Utils
     		return (hUp.y - p.y > 0f && p.y - hDown.y > 0f && p.x - hLeft.x > 0f && p.x - hRight.x < 0f) ? -output : output;
         }
 
-        public static Vector2 RaySphere(Vector3 center, float radius, Vector3 rayOrigin, Vector3 rayDir) // returns Vector2(distance to sphere, distance inside sphere)
+        public static Vector2 RaySphere(Vector3 center, float radius, Vector3 rayOrigin, Vector3 rayDir) // returns new Vector2(distance to sphere, distance inside sphere)
 		{
 		    float a = 1f;
 		    Vector3 offset = new Vector3(rayOrigin.x - center.x, rayOrigin.y - center.y, rayOrigin.z - center.z);
@@ -616,7 +535,7 @@ namespace Utils
         public static Vector3 MovePoint01(Vector3 a, Vector3 b, float distance) { return Lerp(a, b, distance); }
         public static Vector2 MovePoint01(Vector2 a, Vector2 b, float distance) { return Lerp(a, b, distance); }
 
-        public static float Pow(float a, float b) { return (float)Math.Pow((double)a, (double)b); }
+        public static float Pow(float a, float b) { return (float)System.Math.Pow((double)a, (double)b); }
         public static long Pow(int num, int pow) 
         {
             long newNum = num;
@@ -643,7 +562,7 @@ namespace Utils
 		    if (x < 1) { return false; }
 		    if (x == 1) { return true; }
 		 
-		    for (int i = 2; i <= (int)Math.Sqrt((double)x); i++) 
+		    for (int i = 2; i <= (int)Math.Sqrt(x); i++) 
 		    {
 		        if (x % i == 0) { return false; }
 		    }
@@ -651,32 +570,34 @@ namespace Utils
 		    return true;
 		}
 
-		// public static Vector3 MousePositionToWorldXY(Vector3 mousePosition) 
-		// {
-		// 	Ray mouseRay = UnityEditor.HandleUtility.GUIPointToWorldRay(mousePosition);
-		// 	float distanceToDrawPlane = -mouseRay.origin.z / mouseRay.direction.z;
-		// 	return mouseRay.origin + (mouseRay.direction * distanceToDrawPlane);
-		// }
+		#if UNITY
+		public static Vector3 MousePositionToWorldXY(Vector3 mousePosition) 
+		{
+			Ray mouseRay = UnityEditor.HandleUtility.GUIPointToWorldRay(mousePosition);
+			float distanceToDrawPlane = -mouseRay.origin.z / mouseRay.direction.z;
+			return mouseRay.origin + (mouseRay.direction * distanceToDrawPlane);
+		}
 
-		// public static Vector3 MousePositionToWorldZY(Vector3 mousePosition) 
-		// {
-		// 	Ray mouseRay = UnityEditor.HandleUtility.GUIPointToWorldRay(mousePosition);
-		// 	float distanceToDrawPlane = -mouseRay.origin.x / mouseRay.direction.x;
-		// 	return mouseRay.origin + (mouseRay.direction * distanceToDrawPlane);
-		// }
+		public static Vector3 MousePositionToWorldZY(Vector3 mousePosition) 
+		{
+			Ray mouseRay = UnityEditor.HandleUtility.GUIPointToWorldRay(mousePosition);
+			float distanceToDrawPlane = -mouseRay.origin.x / mouseRay.direction.x;
+			return mouseRay.origin + (mouseRay.direction * distanceToDrawPlane);
+		}
 
-		// public static Vector3 MousePositionToWorldXZ(Vector3 mousePosition) 
-		// {
-		// 	Ray mouseRay = UnityEditor.HandleUtility.GUIPointToWorldRay(mousePosition);
-		// 	float distanceToDrawPlane = -mouseRay.origin.y / mouseRay.direction.y;
-		// 	return mouseRay.origin + (mouseRay.direction * distanceToDrawPlane);
-		// }
+		public static Vector3 MousePositionToWorldXZ(Vector3 mousePosition) 
+		{
+			Ray mouseRay = UnityEditor.HandleUtility.GUIPointToWorldRay(mousePosition);
+			float distanceToDrawPlane = -mouseRay.origin.y / mouseRay.direction.y;
+			return mouseRay.origin + (mouseRay.direction * distanceToDrawPlane);
+		}
+		#endif
     }
 
-    public static class Mesh2 
+    public static class Meshes 
     {
-    	/*
-        public static Mesh CombineMeshes(MeshFilter[] filters) 
+    	#if UNITY
+        public static Mesh Combine(MeshFilter[] filters) 
         {
             CombineInstance[] combiner = new CombineInstance[filters.Length];
 
@@ -692,7 +613,7 @@ namespace Utils
 
             return newMesh;
         }
-        */
+        #endif
 
         public static Mesh Icosahedron() 
 		{
@@ -754,7 +675,7 @@ namespace Utils
 				lineSection = 1f / ((float)resolution + 1f);
 				while (v < resolution) 
 				{
-					newVertices.Add(Math2.MovePoint01(borderVertices[0], borderVertices[1], lineSection));
+					newVertices.Add(Math.MovePoint01(borderVertices[0], borderVertices[1], lineSection));
 					lineSection += 1f / ((float)resolution + 1f);
 					v++;
 				}
@@ -763,9 +684,9 @@ namespace Utils
 				lineSection = 1f / ((float)resolution + 1f);
 				while (line < resolution) 
 				{
-					newVertices.Add(Math2.MovePoint01(mesh.vertices[mesh.triangles[t]], mesh.vertices[mesh.triangles[t + 2]], lineSection));
+					newVertices.Add(Math.MovePoint01(mesh.vertices[mesh.triangles[t]], mesh.vertices[mesh.triangles[t + 2]], lineSection));
 					borderVertices[0] = newVertices[newVertices.Count - 1];
-					newVertices.Add(Math2.MovePoint01(mesh.vertices[mesh.triangles[t + 1]], mesh.vertices[mesh.triangles[t + 2]], lineSection));
+					newVertices.Add(Math.MovePoint01(mesh.vertices[mesh.triangles[t + 1]], mesh.vertices[mesh.triangles[t + 2]], lineSection));
 					borderVertices[1] = newVertices[newVertices.Count - 1];
 					lineSection += 1f / ((float)resolution + 1f);
 
@@ -774,7 +695,7 @@ namespace Utils
 					section = 1f / (float)(resolution - line);
 					while (v < resolution - 1 - line) 
 					{
-						newVertices.Add(Math2.MovePoint01(borderVertices[0], borderVertices[1], section));
+						newVertices.Add(Math.MovePoint01(borderVertices[0], borderVertices[1], section));
 						section += 1f / (float)(resolution - line);
 						pointsInside++;
 						v++;
@@ -824,37 +745,37 @@ namespace Utils
         public static string bg { get { return "авбгдежзийклмнопрстуфхцчшщъьюя"; } }
         public static string chars { get { return "!\"#$%&'()*+,-./0123456789:;<=>?@[\\]^_`{|}~ "; } }
 
-        public static bool IsNullOrEmpty(string _main) { return _main == null || _main == ""; }
+        public static bool IsNullOrEmpty(string str) { return str == null || str == ""; }
 
-        public static string JoinArray(string[] array, string separator) 
+        public static string Join(params string[] strs) { return Join("", strs); }
+        public static string Join(string separator, params string[] strs) 
         {
-        	int i = 0;
-        	string newString = "";
-        	while (i < array.Length) { newString += array[i] + separator; i++; }
-        	return newString.Remove(newString.Length - separator.Length, separator.Length);
+        	string output = "";
+        	for (int i = 0; i < strs.Length; i++) { output += strs[i] + separator; }
+        	return output.Remove(output.Length - separator.Length, separator.Length);
         }
 
-		public static string Remove(string _main, int startI) 
+		public static string Remove(string str, int start) 
 		{
-			if (IsNullOrEmpty(_main) || startI < 0 || startI >= _main.Length) { return _main; }
+			if (IsNullOrEmpty(str) || start < 0 || start >= str.Length) { return str; }
 
 			int i = 0;
 			string output = "";
-			while (i < startI) { output += _main[i]; i++; }
+			while (i < start) { output += str[i]; i++; }
 			return output;
 		}
 
-		public static string Remove(string _main, int startI, int count) 
+		public static string Remove(string str, int start, int count) 
 		{
-			if (IsNullOrEmpty(_main) || startI + count > _main.Length || count <= 0 || count > _main.Length || startI < 0 || startI >= _main.Length) { return _main; }
+			if (IsNullOrEmpty(str) || start + count > str.Length || count <= 0 || count > str.Length || start < 0 || start >= str.Length) { return str; }
 
 			int i = 0;
 			int s = 0;
 			string output = "";
-			while (i < _main.Length) 
+			while (i < str.Length) 
 			{
-				if (i == startI) { i += count; }
-				output += _main[i];
+				if (i == start) { i += count; }
+				output += str[i];
 				s++;
 				i++;
 			}
@@ -862,25 +783,42 @@ namespace Utils
 			return output;
 		}
 
-		public static string Reverse(string _main) 
+		public static string Reverse(string str) 
 		{
-		    if (IsNullOrEmpty(_main)) { return _main; }
+		    if (IsNullOrEmpty(str)) { return str; }
 
 		    string output = "";
-		    for (int i = _main.Length - 1; i >= 0; i--) { output += _main[i]; }
-		    return _main;
+		    for (int i = str.Length - 1; i >= 0; i--) { output += str[i]; }
+		    return str;
 		}
 
-		public static string GetStringAt(string _main, int startPos, int endPos) 
+		public static int IndexOfScope(string main, char open, char close) 
 		{
-		    if (IsNullOrEmpty(_main) || startPos < 0 || endPos <= 0 || endPos < startPos || endPos >= _main.Length) { return ""; }
+			if (main == null || main == "" || open == close || !(main.Contains(open.ToString()) && main.Contains(close.ToString()))) { throw new ArgumentException(); }
+
+			int count = 0;
+			for (int i = main.IndexOf(open); i < main.Length; i++) 
+			{
+				bool escape = false;
+				try { escape = main[i - 1] == '\\'; } catch {}
+				if (main[i] == open && !escape) { count++; }
+				if (main[i] == close && !escape) { count--; }
+				if (count <= 0) { return i; }
+			}
+
+			return -1;
+		}
+
+		public static string GetStringAt(string str, int startPos, int endPos) 
+		{
+		    if (IsNullOrEmpty(str) || startPos < 0 || endPos <= 0 || endPos < startPos || endPos >= str.Length) { return ""; }
 
 		    string output = "";
 		    int i = startPos;
 		    int t = 0;
 		    while (t < (endPos - startPos) + 1) 
 		    {
-		        output += _main[i];
+		        output += str[i];
 		        i++;
 		        t++;
 		    }
@@ -888,31 +826,31 @@ namespace Utils
 		    return output;
 		}
 
-		public static bool StartsWith(string _main, string _target) 
+		public static bool StartsWith(string str, string target) 
 		{
-			if (IsNullOrEmpty(_main) || IsNullOrEmpty(_target) || _target.Length > _main.Length) { return false; }
+			if (IsNullOrEmpty(str) || IsNullOrEmpty(target) || target.Length > str.Length) { return false; }
 
 		    int i = 0;
 		    bool pass = true;
-		    while (i < _target.Length && pass) 
+		    while (i < target.Length && pass) 
 		    {
-		        if (_main[i] != _target[i]) { pass = false; }
+		        if (str[i] != target[i]) { pass = false; }
 		        i++;
 		    }
 
 		    return pass;
 		}
 
-		public static bool EndsWith(string _main, string _target) 
+		public static bool EndsWith(string str, string target) 
 		{
-			if (IsNullOrEmpty(_main) || IsNullOrEmpty(_target) || _target.Length > _main.Length) { return false; }
+			if (IsNullOrEmpty(str) || IsNullOrEmpty(target) || target.Length > str.Length) { return false; }
 
-		    int i = _main.Length - 1;
-		    int t = _target.Length - 1;
+		    int i = str.Length - 1;
+		    int t = target.Length - 1;
 		    bool pass = true;
-		    while (i >= _main.Length - _target.Length && pass) 
+		    while (i >= str.Length - target.Length && pass) 
 		    {
-		        if (_main[i] != _target[t]) { pass = false; }
+		        if (str[i] != target[t]) { pass = false; }
 		        i--;
 		        t--;
 		    }
@@ -920,188 +858,179 @@ namespace Utils
 		    return pass;
 		}
 
-		public static int IndexOf(string _main, string _target) 
+		public static int IndexOf(string str, string target) 
 		{
-			if (IsNullOrEmpty(_main) || IsNullOrEmpty(_target) || _target.Length > _main.Length) { return -1; }
+			if (IsNullOrEmpty(str) || IsNullOrEmpty(target) || target.Length > str.Length) { return -1; }
 
 			int i = 0;
 			int t = 0;
-			while (i < _main.Length) 
+			while (i < str.Length) 
 			{
 				t = 0;
-				while (t < _target.Length) 
+				while (t < target.Length) 
 				{
-					if (_main[i + t] != _target[t]) { break; }
+					if (str[i + t] != target[t]) { break; }
 					t++;
 				}
 
-				if (t >= _target.Length) { return i; }
+				if (t >= target.Length) { return i; }
 				i++;
 			}
 
 			return -1;
 		}
 
-		public static int IndexOf(string _main, string _target, int startI) 
+		public static int IndexOf(string str, string target, int start) 
 		{
-			if (IsNullOrEmpty(_main) || IsNullOrEmpty(_target) || _target.Length > _main.Length || startI < 0 || startI >= _main.Length) { return -1; }
+			if (IsNullOrEmpty(str) || IsNullOrEmpty(target) || target.Length > str.Length || start < 0 || start >= str.Length) { return -1; }
 
-			int i = startI;
+			int i = start;
 			int t = 0;
-			while (i < _main.Length) 
+			while (i < str.Length) 
 			{
 				t = 0;
-				while (t < _target.Length) 
+				while (t < target.Length) 
 				{
-					if (_main[i + t] != _target[t]) { break; }
+					if (str[i + t] != target[t]) { break; }
 					t++;
 				}
 
-				if (t >= _target.Length) { return i; }
+				if (t >= target.Length) { return i; }
 				i++;
 			}
 
 			return -1;
 		}
 
-		public static int LastIndexOf(string _main, string _target) 
+		public static int LastIndexOf(string str, string target) 
 		{
-			if (IsNullOrEmpty(_main) || IsNullOrEmpty(_target) || _target.Length > _main.Length) { return -1; }
+			if (IsNullOrEmpty(str) || IsNullOrEmpty(target) || target.Length > str.Length) { return -1; }
 
-			int i = _main.Length - _target.Length;
+			int i = str.Length - target.Length;
 			int t = 0;
 			while (i >= 0) 
 			{
 				t = 0;
-				while (t < _target.Length) 
+				while (t < target.Length) 
 				{
-					if (_main[i + t] != _target[t]) { break; }
+					if (str[i + t] != target[t]) { break; }
 					t++;
 				}
 
-				if (t >= _target.Length) { return i; }
+				if (t >= target.Length) { return i; }
 				i--;
 			}
 
 			return -1;
 		}
 
-		public static bool Contains(string _main, string _target) 
+		public static bool Contains(string str, string target) 
 		{
-			if (IsNullOrEmpty(_main) || IsNullOrEmpty(_target) || _target.Length > _main.Length) { return false; }
+			if (IsNullOrEmpty(str) || IsNullOrEmpty(target) || target.Length > str.Length) { return false; }
 
 			int i = 0;
 			int t = 0;
-			while (i < _main.Length) 
+			while (i < str.Length) 
 			{
 				t = 0;
-				while (t < _target.Length) 
+				while (t < target.Length) 
 				{
-					if (_main[i + t] != _target[t]) { break; }
+					if (str[i + t] != target[t]) { break; }
 					t++;
 				}
 
-				if (t >= _target.Length) { return true; }
+				if (t >= target.Length) { return true; }
 				i++;
 			}
 
 			return false;
 		}
 
-		public static int Count(string _main, char _target) 
+		public static int Count(string str, char target) 
 		{
-			if (IsNullOrEmpty(_main) || _target == '\x0') { return 0; }
+			if (IsNullOrEmpty(str) || target == '\x0') { return 0; }
 
 			int count = 0;
-			for (int i = 0; i < _main.Length; i++) { count += (_main[i] == _target) ? 1 : 0; }
+			for (int i = 0; i < str.Length; i++) { count += (str[i] == target) ? 1 : 0; }
 			return count;
 		}
 
-		public static int Count(string _main, string _target) 
+		public static int Count(string str, string target) 
 		{
-			if (IsNullOrEmpty(_main) || IsNullOrEmpty(_target) || _target.Length > _main.Length) { return 0; }
+			if (IsNullOrEmpty(str) || IsNullOrEmpty(target) || target.Length > str.Length) { return 0; }
 
-			int i = IndexOf(_main, _target);
+			int i = IndexOf(str, target);
 			int count = 0;
 
 			while (i >= 0) 
 			{
-				i = IndexOf(_main, _target, i + 1);
+				i = IndexOf(str, target, i + 1);
 				count++;
 			}
 
 			return count;
 		}
 
-		public static string Insert(string _main, string _target, int index) 
+		public static string Insert(string str, string target, int index) 
 		{
-			if (IsNullOrEmpty(_main) || IsNullOrEmpty(_target) || index < 0 || index >= _main.Length) { return _main; }
+			if (IsNullOrEmpty(str) || IsNullOrEmpty(target) || index < 0 || index >= str.Length) { return str; }
 
 			string output = "";
-			for (int i = 0; i < _main.Length; i++) 
+			for (int i = 0; i < str.Length; i++) 
 			{
-				if (i == index) { output += _target; }
-				output += _main[i];
+				if (i == index) { output += target; }
+				output += str[i];
 			}
 
 			return output;
 		}
 
-		public static string Replace(string _main, string _from, string _to) 
+		public static string Replace(string str, string _from, string _to) 
 		{
-			if (IsNullOrEmpty(_main) || IsNullOrEmpty(_from) || IsNullOrEmpty(_to) || _from.Length > _main.Length) { return _main; }
+			if (IsNullOrEmpty(str) || IsNullOrEmpty(_from) || IsNullOrEmpty(_to) || _from.Length > str.Length) { return str; }
 
-			int i = IndexOf(_main, _from);
-			if (i < 0) { return  _main; }
+			int i = IndexOf(str, _from);
+			if (i < 0) { return  str; }
 
-			string removed = Remove(_main, i, _from.Length);
+			string removed = Remove(str, i, _from.Length);
 			string inserted = Insert(removed, _to, i);
 
 			return (Contains(inserted, _from)) ? Replace(inserted, _from, _to) : inserted;
 		}
 
-		public static string Replace(string _main, string _from, string _to, int count) 
+		public static string Replace(string str, string _from, string _to, int count) 
 		{
-			if (count <= 0 || IsNullOrEmpty(_main) || IsNullOrEmpty(_from) || IsNullOrEmpty(_to) || _from.Length > _main.Length) { return _main; }
+			if (count <= 0 || IsNullOrEmpty(str) || IsNullOrEmpty(_from) || IsNullOrEmpty(_to) || _from.Length > str.Length) { return str; }
 
-			int i = IndexOf(_main, _from);
-			if (i < 0) { return  _main; }
+			int i = IndexOf(str, _from);
+			if (i < 0) { return  str; }
 
-			string removed = Remove(_main, i, _from.Length);
+			string removed = Remove(str, i, _from.Length);
 			string inserted = Insert(removed, _to, i);
 
 			return (Contains(inserted, _from)) ? Replace(inserted, _from, _to, count - 1) : inserted;
 		}
 
-		public static string FillString(string _main, char _target) 
+		public static string FillString(string str, char target) 
 		{
-			if (IsNullOrEmpty(_main) || _target == '\x0') { return _main; }
+			if (IsNullOrEmpty(str) || target == '\x0') { return str; }
 
-			string output = "";
-			for (int i = 0; i < _main.Length; i++) { output += _target; }
-			return output;
+			for (int i = 0; i < str.Length; i++) { str += target; }
+			return str;
 		}
 
-		public static string FillString(char _target, int count) 
+		public static string FillString(char target, int count) 
 		{
-			if (_target == '\x0' || count <= 0) { return ""; }
+			if (target == '\x0' || count <= 0) { return ""; }
 
 			string output = "";
-			for (int i = 0; i < count; i++) { output += _target; }
+			for (int i = 0; i < count; i++) { output += target; }
 			return output;
 		}
     }
 
-    public static class Array2<T> 
+    public static class Array<T> 
     {
-    	// public static T[] Join(T[] array1, T[] array2) 
-    	// {
-    	// 	T[] newArray = new T[array1.Length + array2.Length];
-    	// 	for (int i = 0; i < array1.Length; i++) { newArray[i] = array1[i]; }
-    	// 	for (int i = 0; i < array2.Length; i++) { newArray[i] = array2[i]; }
-    	// 	return newArray;
-    	// }
-
     	public static T[] Join(params T[][] array) 
     	{
     		List<T> list = new List<T>();
@@ -1115,15 +1044,6 @@ namespace Utils
 
     		return list.ToArray();
     	}
-
-    	// public static T[] Join(T[] array1, T[] array2, T[] array3) 
-    	// {
-    	// 	T[] newArray = new T[array1.Length + array2.Length + array3.Length];
-    	// 	for (int i = 0; i < array1.Length; i++) { newArray[i] = array1[i]; }
-    	// 	for (int i = 0; i < array2.Length; i++) { newArray[i] = array2[i]; }
-    	// 	for (int i = 0; i < array3.Length; i++) { newArray[i] = array3[i]; }
-    	// 	return newArray;
-    	// }
 
     	public static T[,] Replace(T[,] array, T from, T to) 
         {

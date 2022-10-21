@@ -1,12 +1,11 @@
 using System;
 
 using Utils;
-using Utils.Web;
 using Utils.Collections;
 
 namespace Utils.Collections.Generic 
 {
-	public class List<T> 
+	public class List<T> : System.Collections.IEnumerable
 	{
 		public int Count { get { return position; } }
 		public int Capacity { get { return array.Length; } }
@@ -24,7 +23,6 @@ namespace Utils.Collections.Generic
 			position -= count;
 		}
 
-		public void Insert(int index, T item) { Insert(item, index); }
 		public void Insert(T item, int index) 
 		{
 			if (index < 0 || index >= Count + 1) { throw new IndexOutOfRangeException(); }
@@ -67,9 +65,6 @@ namespace Utils.Collections.Generic
 			array = newArray;
 		}
 
-		// private void CheckPos(int index) { if (index < 0 || index >= Count) { throw new IndexOutOfRangeException("Index must be non negative and less than the size of the collection."); } }
-		// private void CheckStartCount(int start, int count) { if (start < 0 || count > Count || start + count >= Count) { throw new IndexOutOfRangeException(); } }
-
 		[Obsolete("Not tested.")]
 		public List() 
 		{
@@ -82,6 +77,28 @@ namespace Utils.Collections.Generic
 		{
 			this.array = new T[size];
 			this.position = 0;
+		}
+
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { return (System.Collections.IEnumerator) GetEnumerator(); }
+		public ListEnum<T> GetEnumerator() { return new ListEnum<T>(this); }
+	}
+
+	public class ListEnum<T> : System.Collections.IEnumerator 
+	{
+		public List<T> list;
+		private int position = -1;
+		public ListEnum(List<T> list) { this.list = list; }
+
+		public bool MoveNext() { position++; return position < list.Count; }
+		public void Reset() { position = -1; }
+		object System.Collections.IEnumerator.Current { get { return Current; } }
+		public T Current 
+		{
+			get 
+			{
+				try { return list[position]; }
+				catch (System.IndexOutOfRangeException) { throw new System.InvalidOperationException(); }
+			}
 		}
 	}
 
