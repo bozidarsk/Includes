@@ -1,7 +1,8 @@
-using System;
+#if UNITY
+using UnityEngine;
+#endif
 
-using Utils;
-using Utils.Collections;
+using System;
 
 namespace Utils.Collections.Generic 
 {

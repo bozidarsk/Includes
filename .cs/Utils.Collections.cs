@@ -1,20 +1,9 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Text;
-using System.IO;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading;
-using System.Diagnostics;
-using Microsoft.Win32;
+#if UNITY
+using UnityEngine;
+#endif
 
-using Utils;
-using Utils.Web;
+using System;
+using System.Collections.Generic; // or Utils.*.*
 
 namespace Utils.Collections 
 {

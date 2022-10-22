@@ -1,20 +1,14 @@
+#if UNITY
+using UnityEngine;
+#endif
+
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.Text;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using System.Diagnostics;
-using Microsoft.Win32;
-
-using Utils;
-using Utils.Collections;
 
 namespace Utils.Web 
 {
@@ -22,18 +16,18 @@ namespace Utils.Web
 	{
 		public string Version { private set; get; }
 		public string Name { private set; get; }
-		public string lastHTML { private set; get; }
+		public string CurrentDirectory { private set; get; }
 
 		public string HostName { private set; get; }
 		public int Port { private set; get; }
-		public bool IsRunning { get { return running; } }
+		public bool IsRunning { private set; get; }
 
 		public delegate Response ResponseMethod(HTTPServer server, Request request);
 		private ResponseMethod responseMethod;
 
+		private string lastHTML;
 		private TcpListener listener;
 		private Thread thread;
-		private bool running = false;
 
 		public static readonly Dictionary<string, string> MimeTypes = new Dictionary<string, string>() 
 		{
@@ -708,6 +702,7 @@ namespace Utils.Web
 		private void HandleClient(TcpClient client) 
 		{
 			if (client == null) { return; }
+
 			StreamReader reader = new StreamReader(client.GetStream());
 			string message = "";
 
@@ -718,53 +713,56 @@ namespace Utils.Web
 
 			int errorCode = Convert.ToInt32(response.Status.Split(' ')[0]);
 			string color = (errorCode >= 400) ? ColorConsole.RedF : ((errorCode == 200) ? ColorConsole.GreenF : ColorConsole.GrayF);
-			ColorConsole.WriteLine("Request from: " + request.Host + request.URL + " - Response: " + response.Mime + " " + color + Convert.ToString(errorCode) + ColorConsole.GrayF);
-			
+
+			if (request != null) { ColorConsole.WriteLine("Request: " + request.Host + request.URL + " - Response: " + response.Mime + " " + color + errorCode.ToString() + ColorConsole.GrayF); }
+			else { ColorConsole.WriteLine(ColorConsole.RedF + "Null request." + ColorConsole.GrayF); }
 			response.Post(this, client.GetStream());
 		}
 
 		private void Run() 
 		{
-			running = true;
+			IsRunning = true;
 			listener.Start();
 
-			while (running) 
+			while (IsRunning) 
 			{
-				if (listener == null) { running = false; return; }
+				if (listener == null) { IsRunning = false; return; }
 				TcpClient client = listener.AcceptTcpClient();
 				HandleClient(client);
 				if (client != null) { client.Close(); }
 			}
 
 			listener.Stop();
-			running = false;
+			IsRunning = false;
 		}
 
-		private void Initialize(string HostName, int Port, ResponseMethod responseMethod) 
-		{
+		public void Start() { thread.Start(); Console.WriteLine("Server started on " + HostName + ":" + Port.ToString()); }
+		public void Stop() { thread.Abort(); Console.WriteLine("Server stopped."); IsRunning = false; }
+
+		public HTTPServer(
+			ResponseMethod responseMethod = null,
+			string CurrentDirectory = null,
+			int Port = 8000,
+			string HostName = null,
+			string Name = null
+		) {
 			this.Version = "HTTP/1.1";
-			this.Name = "HTTP Server";
-			this.HostName = HostName;
+			this.Name = (Name != null) ? Name : "HTTP Server";
+			this.HostName = (HostName != null) ? HostName : "127.0.0.1";
 			this.Port = Port;
+			this.CurrentDirectory = (CurrentDirectory != null) ? CurrentDirectory : Directory.GetCurrentDirectory();
+			this.responseMethod = (responseMethod != null) ? responseMethod : new ResponseMethod(Response.GenerateDirectoryResponse);
 			this.listener = new TcpListener(WebTools.ConvertIP(this.HostName), this.Port);
 			this.thread = new Thread(new ThreadStart(Run));
-			this.responseMethod = responseMethod;
 		}
-
-		public void Start() { thread.Start(); Console.WriteLine("Server started on " + HostName + ":" + Convert.ToString(Port)); }
-		public void Stop() { thread.Abort(); Console.WriteLine("Server stopped."); running = false; }
-
-		public HTTPServer() { this.Initialize("127.0.0.1", 8000, Response.GenerateDirectoryResponse); }
-		public HTTPServer(string HostName, int Port, ResponseMethod responseMethod) { this.Initialize(HostName, Port, responseMethod); }
-		public HTTPServer(string HostName, int Port, ResponseMethod responseMethod, string Name) { this.Initialize(HostName, Port, responseMethod); this.Name = Name; }
 
 
 
 		public class Request 
 		{
-			public string Type { set; get; }
-			public string URL { set; get; }
-			public string Host { set; get; }
+			public string Type { private set; get; }
+			public string URL { private set; get; }
+			public string Host { private set; get; }
 
 			public static Request GenerateRequest(string request) 
 			{
@@ -793,21 +791,21 @@ namespace Utils.Web
 		{
 			public string Status { set; get; }
 			public string Mime { set; get; }
-			public string Headers { set; get; }
 			public byte[] Data { set; get; }
+			public string Headers { private set; get; }
 
-			public static Response OK() { return new Response("200 OK", "text/html", Encoding.ASCII.GetBytes("<h1>200 OK</h1>")); }
-			public static Response BadRequest() { return new Response("400 Bad Request", "text/html", Encoding.ASCII.GetBytes("<h1>400 Bad Request</h1>")); }
-			public static Response Forbidden() { return new Response("403 Forbidden", "text/html", Encoding.ASCII.GetBytes("<h1>403 Forbidden</h1>")); }
-			public static Response NotFound() { return new Response("404 Not Found", "text/html", Encoding.ASCII.GetBytes("<h1>404 Not Found</h1>")); }
-			public static Response MethodNotAllowed() { return new Response("405 Method Not Allowed", "text/html", Encoding.ASCII.GetBytes("<h1>405 Method Not Allowed</h1>")); }
-			public static Response NotAcceptable() { return new Response("406 Not Acceptable", "text/html", Encoding.ASCII.GetBytes("<h1>406 Not Acceptable</h1>")); }
-			public static Response UnsupportedMediaType() { return new Response("415 Unsupported Media Type", "text/html", Encoding.ASCII.GetBytes("<h1>415 Unsupported Media Type</h1>")); }
-			public static Response NotImplemented() { return new Response("501 Not Implemented", "text/html", Encoding.ASCII.GetBytes("<h1>501 Not Implemented</h1>")); }
+			public static Response OK(string message = "") { return new Response("200 OK", "text/html", Encoding.ASCII.GetBytes("<h1>200 OK</h1><p>" + message + "</p>")); }
+			public static Response BadRequest(string message = "") { return new Response("400 Bad Request", "text/html", Encoding.ASCII.GetBytes("<h1>400 Bad Request</h1><p>" + message + "</p>")); }
+			public static Response Forbidden(string message = "") { return new Response("403 Forbidden", "text/html", Encoding.ASCII.GetBytes("<h1>403 Forbidden</h1><p>" + message + "</p>")); }
+			public static Response NotFound(string message = "") { return new Response("404 Not Found", "text/html", Encoding.ASCII.GetBytes("<h1>404 Not Found</h1><p>" + message + "</p>")); }
+			public static Response MethodNotAllowed(string message = "") { return new Response("405 Method Not Allowed", "text/html", Encoding.ASCII.GetBytes("<h1>405 Method Not Allowed</h1><p>" + message + "</p>")); }
+			public static Response NotAcceptable(string message = "") { return new Response("406 Not Acceptable", "text/html", Encoding.ASCII.GetBytes("<h1>406 Not Acceptable</h1><p>" + message + "</p>")); }
+			public static Response UnsupportedMediaType(string message = "") { return new Response("415 Unsupported Media Type", "text/html", Encoding.ASCII.GetBytes("<h1>415 Unsupported Media Type</h1><p>" + message + "</p>")); }
+			public static Response NotImplemented(string message = "") { return new Response("501 Not Implemented", "text/html", Encoding.ASCII.GetBytes("<h1>501 Not Implemented</h1><p>" + message + "</p>")); }
 
 			public static Response GenerateHTMLResponse(HTTPServer server, Request request) 
 			{
-				if (request == null) { return Response.BadRequest(); }
+				if (request == null) { return Response.BadRequest("request == null"); }
 
 				if (request.Type == "GET") 
 				{
@@ -818,7 +816,7 @@ namespace Utils.Web
 					path = WebTools.ReplaceURLChars(path.Replace("/", "\\"));
 
 					int dotIndex = path.LastIndexOf(".");
-					string dir = Directory.GetCurrentDirectory() + path;
+					string dir = server.CurrentDirectory + path;
 					if (File.Exists(dir) || dotIndex >= 0) 
 					{
 						string extention = (dotIndex >= 0) ? path.Substring(dotIndex, path.Length - dotIndex).ToLower() : "";
@@ -826,14 +824,14 @@ namespace Utils.Web
 						catch (KeyNotFoundException) 
 						{
 							ColorConsole.WriteLine(ColorConsole.YellowF + "MIME not avaliable for URL: " + request.URL + ColorConsole.GrayF);
-							return Response.NotAcceptable();
+							return Response.NotAcceptable("MIME not found for '" + request.URL + "'.");
 						}
 
 						string file = dir;
 						if (!File.Exists(file)) 
 						{
 							file = file.Replace(path, server.lastHTML + path);
-							if (!File.Exists(file)) { return Response.NotFound(); }
+							if (!File.Exists(file)) { return Response.NotFound("File not found. - '" + file + "'"); }
 						}
 
 						response.Data = File.ReadAllBytes(file);
@@ -841,7 +839,7 @@ namespace Utils.Web
 					}
 					else 
 					{
-						if (!Directory.Exists(dir)) { return Response.NotFound(); }
+						if (!Directory.Exists(dir)) { return Response.NotFound("Directory not found. - '" + dir + "'"); }
 						string[] files = { "index.html", "index.htm", "default.html", "default.htm" };
 
 						for (int i = 0; i < files.Length; i++) { if (File.Exists(dir + files[i])) { response.Data = File.ReadAllBytes(dir + files[i]); server.lastHTML = path; return response; } }
@@ -852,11 +850,11 @@ namespace Utils.Web
 						files = Directory.GetFiles(dir, "*.htm", SearchOption.TopDirectoryOnly);
 						if (files.Length > 0) { response.Data = File.ReadAllBytes(files[0]); server.lastHTML = path; return response; }
 
-						return Response.NotFound();
+						return Response.NotFound("HTML file not found.");
 					}
 				}
 				
-				return Response.MethodNotAllowed();
+				return Response.MethodNotAllowed("Only GET method is allowed.");
 			}
 
 			public static Response GenerateDirectoryResponse(HTTPServer server, Request request) 
@@ -871,7 +869,7 @@ namespace Utils.Web
 					if (path[path.Length - 1] == '/') { path = path.TrimEnd('/'); }
 					path = WebTools.ReplaceURLChars(path.Replace("/", "\\"));
 
-					if (File.Exists(server.Name + path)) 
+					if (File.Exists(server.CurrentDirectory + path)) 
 					{
 						int dotIndex = path.LastIndexOf(".");
 						string extention = (dotIndex >= 0) ? path.Substring(dotIndex, path.Length - dotIndex).ToLower() : "";
@@ -882,11 +880,11 @@ namespace Utils.Web
 							response.Mime = "text/html";
 						}
 
-						string file = server.Name + path;
+						string file = server.CurrentDirectory + path;
 						if (!File.Exists(file)) 
 						{
-							file = file.Replace(server.Name, server.lastHTML);
-							if (!File.Exists(file)) { return Response.NotFound(); }
+							file = file.Replace(server.CurrentDirectory, server.lastHTML);
+							if (!File.Exists(file)) { return Response.NotFound("File not found. - '" + file + "'"); }
 						}
 
 						if (response.Mime == "application/pdf") { response.AddHeader("Content-Disposition: inline"); response.Data = File.ReadAllBytes(file); return response; }
@@ -917,10 +915,10 @@ namespace Utils.Web
 					}
 					else 
 					{
-						string dir = server.Name + path;
-						if (!Directory.Exists(dir)) { return Response.NotFound(); }
+						string dir = server.CurrentDirectory + path;
+						if (!Directory.Exists(dir)) { return Response.NotFound(((dir.LastIndexOf(".") - dir.LastIndexOf("\\") > 1) ? "File" : "Directory") + " not found. - '" + dir + "'"); }
 
-						bool isRoot = server.Name == dir;
+						bool isRoot = server.CurrentDirectory == dir;
 						int t = (!isRoot) ? 1 : 0;
 						string[] files = Directory.GetFiles(dir, "*", SearchOption.TopDirectoryOnly);
 						string[] directories = Directory.GetDirectories(dir, "*", SearchOption.TopDirectoryOnly);
@@ -954,7 +952,7 @@ namespace Utils.Web
 					}
 				}
 				
-				return Response.MethodNotAllowed();
+				return Response.MethodNotAllowed("Only GET method is allowed.");
 			}
 
 			public void AddHeader(string header) { Headers += header + "\r\n"; }
@@ -964,7 +962,7 @@ namespace Utils.Web
 				Headers = server.Version + " " + Status + "\r\n" + Headers;
 				AddHeader("Content-Type: " + Mime + "; charset=utf-8");
 				AddHeader("Accept-Ranges: bytes");
-				AddHeader("Content-Length: " + Convert.ToString(Data.Length));
+				AddHeader("Content-Length: " + Data.Length.ToString());
 				writer.WriteLine(Headers);
 				writer.Flush();
 
@@ -977,8 +975,8 @@ namespace Utils.Web
 			{
 				this.Status = Status;
 				this.Mime = Mime;
-				this.Headers = "";
 				this.Data = Data;
+				this.Headers = "";
 			}
 		}
 	}

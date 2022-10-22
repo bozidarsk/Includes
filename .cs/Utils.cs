@@ -1,19 +1,18 @@
-﻿using System;
-using System.Collections;
+﻿#if UNITY
+using UnityEngine;
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Text;
 using System.IO;
-using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.Diagnostics;
 using Microsoft.Win32;
 
-using Utils.Web;
 using Utils.Collections;
 
 namespace Utils 
@@ -70,7 +69,7 @@ namespace Utils
 		    // Centered = 1
 		    // Stretched = 2
 
-		    Stream s = new WebClient().OpenRead(file);
+		    Stream s = new System.Net.WebClient().OpenRead(file);
 		    Image img = Image.FromStream(s);
 		    string tempPath = Path.Combine(Path.GetTempPath(), "wallpaper.bmp");
 		    img.Save(tempPath, ImageFormat.Bmp);

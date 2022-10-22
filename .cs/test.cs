@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 
 using Utils;
@@ -10,20 +11,25 @@ class main
 {
 	static void Main() 
 	{
-		List<string> list = new List<string>();
-		list.AddRange(new string[] {
-			"az",
-			"sum",
-			"test"
-		});
+		// List<string> list = new List<string>();
+		// list.AddRange(new string[] {
+		// 	"az",
+		// 	"sum",
+		// 	"test"
+		// });
 
-		foreach (string item in list) 
-		{
-			Console.WriteLine(item);
-		}
+		// foreach (string item in list) 
+		// {
+		// 	Console.WriteLine(item);
+		// }
 
-		// Console.WriteLine(list.Where(x => x[0] == 'a').ToArray()[0]);
 
-		Console.WriteLine("OK");
+		new HTTPServer(
+			new HTTPServer.ResponseMethod(HTTPServer.Response.GenerateDirectoryResponse),
+			Directory.GetCurrentDirectory(),
+			8000,
+			WebTools.GetLocalIP(),
+			"Test Server"
+		).Start();
 	}
 }
