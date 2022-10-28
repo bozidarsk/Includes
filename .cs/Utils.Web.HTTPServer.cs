@@ -896,7 +896,7 @@ namespace Utils.Web
 							extention == ".docx" || extention == ".pptx" || extention == ".xlsx" ||
 							extention == ".blend" || extention == ".deb" || extention == ".psd" ||
 							extention == ".rar" || extention == ".zip" || extention == ".7z" ||
-							extention == ".lnk" || extention == ".out")
+							extention == ".lnk" || extention == ".out" || extention == ".apk")
 						{ response.Mime = "text/plain"; response.Data = File.ReadAllBytes(file); return response; }
 
 						response.Mime = "text/html";
