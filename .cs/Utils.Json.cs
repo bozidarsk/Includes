@@ -6,6 +6,19 @@ using System.Linq;
 
 namespace Utils.Json 
 {
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field)]
+	public sealed class SerializeAttribute : Attribute { public SerializeAttribute() {} }
+
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field)]
+	public sealed class DeserializeAttribute : Attribute { public DeserializeAttribute() {} }
+
+	public sealed class JsonException : Exception 
+	{
+		public JsonException() {}
+		public JsonException(string message) : base(message) {}
+		public JsonException(string message, Exception inner) : base(message, inner) {}
+	}
+	
 	public static class Json 
 	{
 		public static string ToJson(object obj, bool prettyPrint = false) 
@@ -272,19 +285,6 @@ namespace Utils.Json
 			type == typeof(double) || 
 			type == typeof(decimal) || 
 			type == typeof(bool);
-		}
-
-		[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field)]
-		public sealed class SerializeAttribute : Attribute { public SerializeAttribute() {} }
-
-		[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field)]
-		public sealed class DeserializeAttribute : Attribute { public DeserializeAttribute() {} }
-
-		public sealed class JsonException : Exception 
-		{
-			public JsonException() {}
-			public JsonException(string message) : base(message) {}
-			public JsonException(string message, Exception inner) : base(message, inner) {}
 		}
 
 		private class Pair 
