@@ -18,7 +18,7 @@ namespace Utils.Json
 		public JsonException(string message) : base(message) {}
 		public JsonException(string message, Exception inner) : base(message, inner) {}
 	}
-	
+
 	public static class Json 
 	{
 		public static string ToJson(object obj, bool prettyPrint = false) 
@@ -45,7 +45,7 @@ namespace Utils.Json
 				}
 				else { value = ToJson(fields[i].GetValue(obj), prettyPrint); }
 
-				output += indent + "\"" + fields[i].Name + "\":" + ((prettyPrint) ? " " : "") + value;
+				output += Indent(stackc) + "\"" + fields[i].Name + "\":" + ((prettyPrint) ? " " : "") + value;
 			}
 
 			return (prettyPrint) ? (((stackc > 1) ? "\n" : "") + Indent(stackc - 1) + "{\n" + output + "\n" + Indent(stackc - 1) + "}") : ("{" + output + "}");
