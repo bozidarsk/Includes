@@ -791,12 +791,12 @@ namespace Utils
 		    return str;
 		}
 
-		public static int IndexOfScope(string main, char open, char close) 
+		public static int EndOfScope(string main, char open, char close, int startIndex = 0) 
 		{
 			if (main == null || main == "" || open == close || !(main.Contains(open.ToString()) && main.Contains(close.ToString()))) { throw new ArgumentException(); }
 
 			int count = 0;
-			for (int i = main.IndexOf(open); i < main.Length; i++) 
+			for (int i = main.IndexOf(open, startIndex); i < main.Length; i++) 
 			{
 				bool escape = false;
 				try { escape = main[i - 1] == '\\'; } catch {}
