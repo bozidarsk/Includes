@@ -77,7 +77,7 @@ namespace Utils.Json
 		private static object FillValues(Type rootType, dynamic[] rootPairs) 
 		{
 			FieldInfo[] fields = rootType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(x => IsSerialized(x)).ToArray();
-			dynamic obj = Activator.CreateInstance(rootType);
+			object obj = Activator.CreateInstance(rootType);
 
 			for (int i = 0; i < fields.Length; i++) 
 			{
