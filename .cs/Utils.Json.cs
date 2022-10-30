@@ -14,7 +14,7 @@ namespace Utils.Json
 
 	public sealed class JsonException : Exception 
 	{
-		public JsonException() {}
+		public JsonException() : base() {}
 		public JsonException(string message) : base(message) {}
 		public JsonException(string message, Exception inner) : base(message, inner) {}
 	}
@@ -23,6 +23,7 @@ namespace Utils.Json
 	{
 		public static string ToJson(object obj, bool prettyPrint = false) 
 		{
+			if (obj == null) { return "null"; }
 			int stackc = (prettyPrint) ? CountInStack("Utils.Json.Json.ToJson") : -1;
 
 			Type type = obj.GetType();
@@ -30,7 +31,7 @@ namespace Utils.Json
 			if (IsBasic(type)) { return (type == typeof(string) || type == typeof(char)) ? "\"" + obj.ToString() + "\"" : obj.ToString(); }
 
 			string output = "";
-			FieldInfo[] fields = obj.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(x => IsSerialized(x)).ToArray();
+			FieldInfo[] fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(x => IsSerialized(x)).ToArray();
 			for (int i = 0; i < fields.Length; i++) 
 			{
 				if (i > 0) { output += "," + ((prettyPrint) ? "\n" : ""); }
@@ -73,7 +74,10 @@ namespace Utils.Json
 		private static object FillValues(Type rootType, dynamic[] rootPairs) 
 		{
 			FieldInfo[] fields = rootType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(x => IsSerialized(x)).ToArray();
-			dynamic obj = rootType.GetConstructor(new Type[] {}).Invoke(null);
+			// ConstructorInfo ctor = rootType.GetConstructor(Type.EmptyTypes);
+			// if (ctor == null) { Console.WriteLine("Null ctor."); }
+			// dynamic obj = ctor.Invoke(null);
+			dynamic obj = Activator.CreateInstance(rootType);
 
 			for (int i = 0; i < fields.Length; i++) 
 			{
@@ -81,20 +85,28 @@ namespace Utils.Json
 				try { pair = rootPairs.Where(x => x.name == fields[i].Name).ToArray()[0]; }
 				catch { continue; }
 
-				if (((Pair)pair).type.StartsWith("object")) { fields[i].SetValue(obj, FillValues(fields[i].FieldType, pair.childPairs)); }
-				else if (((Pair)pair).type.StartsWith("array")) 
+				if (pair.type.StartsWith("object")) { fields[i].SetValue(obj, FillValues(fields[i].FieldType, pair.childPairs)); }
+				else if (pair.type.StartsWith("array")) 
 				{
-					dynamic[] values = ((Pair)pair).childPairs.Select(x => x.value).ToArray();
-
 					dynamic array = fields[i].FieldType.GetConstructor(new Type[] { typeof(int) }).Invoke(new object[] { pair.childPairs.Length });
-					for (int t = 0; t < array.Length; t++) { array[t] = pair.childPairs[t].value; }
+					string strType = array.GetType().ToString();
+					Type elementType = Tools.GetTypeByName(strType.Remove(strType.Length - 2, 2));
+
+					for (int t = 0; t < array.Length; t++) 
+					{
+						array[t] = (pair.type.StartsWith("array/object") || pair.type.StartsWith("array/array")) 
+							? FillValues(elementType, pair.childPairs[t])
+							: pair.childPairs[t].value
+						;
+					}
+
 					fields[i].SetValue(obj, array);
 				}
 				else 
 				{
 					fields[i].SetValue(obj, (fields[i].FieldType.IsEnum)
 						? Enum.ToObject(fields[i].FieldType, (int)pair.value)
-						: Convert.ChangeType(pair.value, fields[i].FieldType)
+						: ((pair.type == "null") ? null : Convert.ChangeType(pair.value, fields[i].FieldType))
 					);
 				}
 			}
@@ -158,11 +170,27 @@ namespace Utils.Json
 						break;
 					default:
 						int start = i - 1;
-						Skip(ref i, json, "-+eE.1234567890null");
+						Skip(ref i, json, "-+eE.1234567890nulltruefalse");
 						currentPair.content = String2.GetStringAt(json, start, i - 2);
-						currentPair.type = (currentPair.content == "null") ? "null" : ((currentPair.content.Contains(".") || currentPair.content.ToLower().Contains("e")) ? "float" : "int");
+
+						switch (currentPair.content) 
+						{
+							case "false":
+							case "true":
+								currentPair.type = "bool";
+								currentPair.value = (currentPair.content == "true") ? true : false;
+								break;
+							case "null":
+								currentPair.type = "null";
+								currentPair.value = null;
+								break;
+							default:
+								if (currentPair.content.Contains(".") || currentPair.content.ToLower().Contains("e")) { currentPair.type = "float"; currentPair.value = float.Parse(currentPair.content); }
+								else { currentPair.type = "int"; currentPair.value = int.Parse(currentPair.content); }
+								break;
+						}
+
 						currentPair.childPairs = null;
-						currentPair.value = (currentPair.content.Contains(".") || currentPair.content.ToLower().Contains("e")) ? float.Parse(currentPair.content) : int.Parse(currentPair.content);
 						pairs.Add(currentPair);
 
 						i--;
@@ -170,7 +198,8 @@ namespace Utils.Json
 						break;
 				}
 
-				Skip(ref i, json);
+				try { Skip(ref i, json); }
+				catch { break; }
 				i--;
 			}
 
@@ -182,17 +211,20 @@ namespace Utils.Json
 			if (array.IndexOf("{") >= 0) { elementType = "object"; }
 			else if (array.IndexOf("[", 2) >= 0) { elementType = "array"; }
 			else if (array.IndexOf("\"") >= 0) { elementType = "string"; }
+			else if (array.Contains("true") || array.Contains("false")) { elementType = "bool"; }
 			else { elementType = (array.Contains(".") || array.ToLower().Contains("e")) ? "float" : "int"; }
 
-			List<dynamic[]> childs = null;
-			string[] elements = null;
+			List<string> objelements = new List<string>();
+			List<dynamic[]> childs = new List<dynamic[]>();
+			int end = 0;
 
 			switch (elementType) 
 			{
+				case "bool":
 				case "string":
 				case "float":
 				case "int":
-					elements = array.Split(',');
+					string[] elements = array.Split(',');
 					Pair[] pairs = new Pair[elements.Length];
 
 					if (elementType != "string") { elements = elements.Select(x => x.Replace(" ", "").Replace("\r", "").Replace("\t", "").Replace("\n", "")).ToArray(); }
@@ -209,39 +241,57 @@ namespace Utils.Json
 						pairs[i].type = elementType;
 						pairs[i].childPairs = null;
 
-						if (elementType == "string") { pairs[i].value = elements[i]; }
-						if (elementType == "float") { pairs[i].value = float.Parse(elements[i]); }
-						if (elementType == "int") { pairs[i].value = int.Parse(elements[i]); }
+						switch (elementType) 
+						{
+							case "string":
+								pairs[i].value = elements[i];
+								break;
+							case "bool":
+								pairs[i].value = (elements[i] == "true") ? true : false;
+								break;
+							case "float":
+								pairs[i].value = float.Parse(elements[i]);
+								break;
+							case "int":
+								pairs[i].value = int.Parse(elements[i]);
+								break;
+						}
 					}
 
 					return pairs;
 				case "array":
-					childs = new List<dynamic[]>();
-					elements = array.Split('[');
-
-					for (int i = 0; i < elements.Length; i++) 
+					for (int start = array.IndexOf("["); start >= 0; start = array.IndexOf("[", end)) 
 					{
-						elements[i] = elements[i].TrimStart('[', ' ', '\t', '\r', '\n').TrimEnd(',', ']', ' ', '\t', '\r', '\n');
-						elements[i] = "[" + elements[i] + "]";
-						if (elements[i] == "[]") { continue; }
+						end = String2.EndOfScope(array, '[', ']', start);
+						objelements.Add(String2.GetStringAt(array, start, end));
+					}
+
+					for (int i = 0; i < objelements.Count; i++) 
+					{
+						objelements[i] = objelements[i].TrimStart('[', ' ', '\t', '\r', '\n').TrimEnd(',', ']', ' ', '\t', '\r', '\n');
+						objelements[i] = "[" + objelements[i] + "]";
+						if (objelements[i] == "[]") { continue; }
 
 						string childType;
-						childs.Add(GetArrayElements(elements[i], out childType));
+						childs.Add(GetArrayElements(objelements[i], out childType));
 						if (elementType.EndsWith("array")) { elementType += "/" + childType; }
 					}
 
 					return childs.ToArray();
 				case "object":
-					childs = new List<dynamic[]>();
-					elements = array.Split('{');
-
-					for (int i = 0; i < elements.Length; i++) 
+					for (int start = array.IndexOf("{"); start >= 0; start = array.IndexOf("{", end)) 
 					{
-						elements[i] = elements[i].TrimStart('{', ' ', '\t', '\r', '\n').TrimEnd(',', '}', ' ', '\t', '\r', '\n');
-						elements[i] = "{" + elements[i] + "}";
-						if (elements[i] == "{}") { continue; }
+						end = String2.EndOfScope(array, '{', '}', start);
+						objelements.Add(String2.GetStringAt(array, start, end));
+					}
 
-						childs.Add(GetPairsFromJson(elements[i]));
+					for (int i = 0; i < objelements.Count; i++) 
+					{
+						objelements[i] = objelements[i].TrimStart('{', ' ', '\t', '\r', '\n').TrimEnd(',', '}', ' ', '\t', '\r', '\n');
+						objelements[i] = "{" + objelements[i] + "}";
+						if (objelements[i] == "{}") { continue; }
+
+						childs.Add(GetPairsFromJson(objelements[i]));
 					}
 
 					return childs.ToArray();
@@ -295,7 +345,7 @@ namespace Utils.Json
 			public object value;
 			public dynamic[] childPairs;
 
-			public override string ToString() { return "name: '" + name + "'\ntype: '" + type + "'\nchildCount: " + ((childPairs == null) ? 0 : childPairs.Length).ToString() + "\nvalue: " + value.ToString() + "\ncontent: '" + content + "'"; }
+			public override string ToString() { return "name: '" + name + "'\ntype: '" + type + "'\nchildCount: " + ((childPairs == null) ? 0 : childPairs.Length).ToString() + "\nvalue: " + ((value == null) ? "null" : value).ToString() + "\ncontent: '" + content + "'"; }
 
 			public Pair() 
 			{
