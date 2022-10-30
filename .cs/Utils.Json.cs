@@ -91,7 +91,13 @@ namespace Utils.Json
 					dynamic array = fields[i].FieldType.GetConstructor(new Type[] { typeof(int) }).Invoke(new object[] { pair.childPairs.Length });
 
 					string tmp = array.GetType().ToString();
-					Type elementType = Type.GetType(tmp.Remove(tmp.Length - 2, 2));
+					tmp = tmp.Remove(tmp.Length - 2, 2);
+					Type elementType = Type.GetType(tmp);
+
+					#if UNITY
+					string[] dlls = { "UnityEngine.dll", "UniytEditor.dll" };
+					for (int t = 0; t < dlls.Length && elementType == null; t++) { elementType = Type.GetType(tmp + "," + dlls[t]); }
+					#endif
 
 					for (int t = 0; t < array.Length; t++) 
 					{
