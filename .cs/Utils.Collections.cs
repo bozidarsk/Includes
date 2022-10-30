@@ -5,10 +5,24 @@ using UnityEngine;
 using System;
 using System.Collections.Generic; // or Utils.*.*
 
+#if !UNITY
+namespace UnityEngine 
+{
+    public static class Rendering 
+    {
+        public enum IndexFormat 
+        {
+            UInt16,
+            UInt32
+        }
+    }
+}
+#endif
+
 namespace Utils.Collections 
 {
 	#if !UNITY
-	public class Vector3 
+	public sealed class Vector3 
     {
         public float x { set; get; }
         public float y { set; get; }
@@ -49,7 +63,7 @@ namespace Utils.Collections
         }
     }
 
-    public class Vector2 
+    public sealed class Vector2 
     {
         public float x { set; get; }
         public float y { set; get; }
@@ -87,6 +101,57 @@ namespace Utils.Collections
     }
     #endif
 
+    public sealed class Vector4<T> 
+    {
+        public T x;
+        public T y;
+        public T z;
+        public T w;
+
+        public override string ToString() { return "(" + x.ToString() + ", " + y.ToString() + ", " + z.ToString() + ", " + w.ToString() + ")"; }
+
+        public Vector4() {}
+        public Vector4(T x, T y, T z, T w) 
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.w = w;
+        }
+    }
+
+    public sealed class Vector3<T> 
+    {
+        public T x;
+        public T y;
+        public T z;
+
+        public override string ToString() { return "(" + x.ToString() + ", " + y.ToString() + ", " + z.ToString() + ")"; }
+
+        public Vector3() {}
+        public Vector3(T x, T y, T z) 
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+    }
+
+    public sealed class Vector2<T> 
+    {
+        public T x;
+        public T y;
+
+        public override string ToString() { return "(" + x.ToString() + ", " + y.ToString() + ")"; }
+
+        public Vector2() {}
+        public Vector2(T x, T y) 
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
     public class ObjectMesh 
 	{
 		public int vertexCount { get { return vertices.Count; } }
@@ -95,7 +160,7 @@ namespace Utils.Collections
 			get 
 			{
 				Mesh mesh = new Mesh();
-				mesh.indexFormat = IndexFormat.UInt32;
+				mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 				mesh.vertices = vertices.ToArray();
 				mesh.triangles = triangles.ToArray();
 				mesh.uv = uvs.ToArray();
@@ -144,16 +209,10 @@ namespace Utils.Collections
 		public Vector3[] vertices { set; get; }
 		public Vector2[] uv { set; get; }
 		public int[] triangles { set; get; }
-		public IndexFormat indexFormat;
+		public UnityEngine.Rendering.IndexFormat indexFormat;
 		public void RecalculateNormals() {}
 		public void Optimize() {}
     	public Mesh() {}
-    }
-
-    public enum IndexFormat 
-    {
-    	UInt16,
-    	UInt32
     }
     #endif
 }
