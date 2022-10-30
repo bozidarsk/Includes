@@ -152,6 +152,21 @@ namespace Utils.Collections
         }
     }
 
+    public sealed class Range<T> 
+    {
+        public T min;
+        public T max;
+
+        public override string ToString() { return "(" + min.ToString() + ", " + max.ToString() + ")"; }
+
+        public Range() {}
+        public Range(T min, T max) 
+        {
+            this.min = min;
+            this.max = max;
+        }
+    }
+
     public class ObjectMesh 
 	{
 		public int vertexCount { get { return vertices.Count; } }
