@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Reflection;
 using System.Linq;
 using System.IO;
@@ -316,8 +317,8 @@ namespace Utils.Json
 
 		private static bool IsSerialized(FieldInfo field) 
 		{
-			if (field.GetCustomAttributes(typeof(DeserializeAttribute), false).Length > 0) { return false; }
-			if (field.GetCustomAttributes(typeof(SerializeAttribute), false).Length > 0) { return true; }
+			if (field.GetCustomAttributes(typeof(DeserializeAttribute), false).Length > 0 || field.GetCustomAttributes(typeof(NonSerializedAttribute), false).Length > 0) { return false; }
+			if (field.GetCustomAttributes(typeof(SerializeAttribute), false).Length > 0 || field.GetCustomAttributes(typeof(SerializableAttribute), false).Length > 0) { return true; }
 			return field.IsPublic;
 		}
 
