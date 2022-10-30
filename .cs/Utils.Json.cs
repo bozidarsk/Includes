@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
+using System.IO;
 
 namespace Utils.Json 
 {
@@ -52,6 +53,7 @@ namespace Utils.Json
 			return (prettyPrint) ? (((stackc > 1) ? "\n" : "") + Indent(stackc - 1) + "{\n" + output + "\n" + Indent(stackc - 1) + "}") : ("{" + output + "}");
 		}
 
+		public static T FromJsonFile<T>(string file) { return FromJson<T>(File.ReadAllText(file)); }
 		public static T FromJson<T>(string json) 
 		{
 			int startIndex = 0;
@@ -74,9 +76,6 @@ namespace Utils.Json
 		private static object FillValues(Type rootType, dynamic[] rootPairs) 
 		{
 			FieldInfo[] fields = rootType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(x => IsSerialized(x)).ToArray();
-			// ConstructorInfo ctor = rootType.GetConstructor(Type.EmptyTypes);
-			// if (ctor == null) { Console.WriteLine("Null ctor."); }
-			// dynamic obj = ctor.Invoke(null);
 			dynamic obj = Activator.CreateInstance(rootType);
 
 			for (int i = 0; i < fields.Length; i++) 
@@ -89,8 +88,9 @@ namespace Utils.Json
 				else if (pair.type.StartsWith("array")) 
 				{
 					dynamic array = fields[i].FieldType.GetConstructor(new Type[] { typeof(int) }).Invoke(new object[] { pair.childPairs.Length });
-					string strType = array.GetType().ToString();
-					Type elementType = Tools.GetTypeByName(strType.Remove(strType.Length - 2, 2));
+
+					string tmp = array.GetType().ToString();
+					Type elementType = Type.GetType(tmp.Remove(tmp.Length - 2, 2));
 
 					for (int t = 0; t < array.Length; t++) 
 					{
@@ -171,7 +171,7 @@ namespace Utils.Json
 					default:
 						int start = i - 1;
 						Skip(ref i, json, "-+eE.1234567890nulltruefalse");
-						currentPair.content = String2.GetStringAt(json, start, i - 2);
+						currentPair.content = String2.GetStringAt(json, start, i - 2).TrimStart().TrimEnd();
 
 						switch (currentPair.content) 
 						{
@@ -180,6 +180,7 @@ namespace Utils.Json
 								currentPair.type = "bool";
 								currentPair.value = (currentPair.content == "true") ? true : false;
 								break;
+							case "nul":
 							case "null":
 								currentPair.type = "null";
 								currentPair.value = null;
@@ -208,6 +209,8 @@ namespace Utils.Json
 
 		private static dynamic[] GetArrayElements(string array, out string elementType) 
 		{
+			if (array.Length == String2.Count(array, ' ') + 2) { elementType = "array"; return new dynamic[] {}; }
+
 			if (array.IndexOf("{") >= 0) { elementType = "object"; }
 			else if (array.IndexOf("[", 2) >= 0) { elementType = "array"; }
 			else if (array.IndexOf("\"") >= 0) { elementType = "string"; }
@@ -268,9 +271,10 @@ namespace Utils.Json
 
 					for (int i = 0; i < objelements.Count; i++) 
 					{
-						objelements[i] = objelements[i].TrimStart('[', ' ', '\t', '\r', '\n').TrimEnd(',', ']', ' ', '\t', '\r', '\n');
-						objelements[i] = "[" + objelements[i] + "]";
-						if (objelements[i] == "[]") { continue; }
+						// objelements[i] = objelements[i].TrimStart('[', ' ', '\t', '\r', '\n').TrimEnd(',', ']', ' ', '\t', '\r', '\n');
+						// objelements[i] = "[" + objelements[i] + "]";
+						// if (objelements[i] == "[]") { continue; }
+						if (objelements[i] == "") { continue; }
 
 						string childType;
 						childs.Add(GetArrayElements(objelements[i], out childType));
@@ -287,9 +291,10 @@ namespace Utils.Json
 
 					for (int i = 0; i < objelements.Count; i++) 
 					{
-						objelements[i] = objelements[i].TrimStart('{', ' ', '\t', '\r', '\n').TrimEnd(',', '}', ' ', '\t', '\r', '\n');
-						objelements[i] = "{" + objelements[i] + "}";
-						if (objelements[i] == "{}") { continue; }
+						// objelements[i] = objelements[i].TrimStart('{', ' ', '\t', '\r', '\n').TrimEnd(',', '}', ' ', '\t', '\r', '\n');
+						// objelements[i] = "{" + objelements[i] + "}";
+						// if (objelements[i] == "{}") { continue; }
+						if (objelements[i] == "") { continue; }
 
 						childs.Add(GetPairsFromJson(objelements[i]));
 					}
