@@ -10,7 +10,7 @@ namespace Utils.Calculators
 		public static readonly string ErrMsg = "Error.";
 		public static readonly string Doc = "example: \"5x^4 -2x^3 +3x -1 >= 0\" is equal to \"+5-2+0+3-1>=\"";
 
-		private static int[] GetCoefficients(string polynomial) 
+		private static float[] GetCoefficients(string polynomial) 
 		{
 			List<string> numbers = new List<string>();
 			string currentNumber = "";
@@ -27,27 +27,50 @@ namespace Utils.Calculators
 			}
 
 			numbers.Add(currentNumber);
-			return numbers.Select(x => int.Parse(x)).ToArray();
+			return numbers.Select(x => float.Parse(x)).ToArray();
 		}
 
-		private static bool CheckAnswer(string polynomial, int answer, out string newPolynomial) 
+		private static bool CheckAnswer(float[] coefficients, float answer, out string newPolynomial) 
 		{
-			int[] coefficients = GetCoefficients(polynomial);
-			int number = coefficients[0];
+			float number = coefficients[0];
 			newPolynomial = (coefficients[0] >= 0) ? ("+" + coefficients[0].ToString()) : coefficients[0].ToString();
 
 			for (int i = 0; i < coefficients.Length - 1; i++) 
 			{
 				number = number * answer + coefficients[i + 1];
-				if (number == 0 && i + 1 >= coefficients.Length - 1) { break; }
-				newPolynomial += (number >= 0) ? ("+" + number.ToString()) : number.ToString();
+				if (number == 0f && i + 1 >= coefficients.Length - 1) { break; }
+				newPolynomial += (number >= 0f) ? ("+" + number.ToString()) : number.ToString();
 			}
 
-			if (number == 0) { return true; }
+			if (number == 0f) { return true; }
 			else { newPolynomial = null; return false; }
 		}
 
-		private static string Format(int[] answers) 
+		private static float[] GetValues(float firstCoefficient, float lastCoefficient) 
+		{
+			if (firstCoefficient < 0f) { throw new NotImplementedException("firstCoefficient < 0f"); }
+			// firstCoefficient *= (firstCoefficient < 0f) ? -1f : 1f;
+			lastCoefficient *= (lastCoefficient < 0f) ? -1f : 1f;
+
+			List<float> last = new List<float>();
+			for (int i = 1; i <= lastCoefficient; i++) { if (lastCoefficient % (float)i == 0) { last.Add((float)i); last.Add((float)-i); } }
+			if (firstCoefficient == 1f) { return last.ToArray(); }
+
+			List<float> values = new List<float>();
+			for (int i = 1; i <= firstCoefficient; i++) 
+			{
+				if (firstCoefficient % (float)i == 0f) 
+				{
+					values.AddRange(last.Select(x => x / (float)i).ToArray());
+					values.AddRange(last.Select(x => x / (float)-i).ToArray());
+				}
+			}
+
+			values.AddRange(last);
+			return values.ToArray();
+		}
+
+		private static string Format(float[] answers) 
 		{
 			string output = "";
 			int power = 1;
@@ -57,7 +80,7 @@ namespace Utils.Calculators
 				try { while (answers[i + 1] == answers[i]) { power++; i++; } }
 				catch {}
 
-				output += "(x" + ((-answers[i] >= 0) ? ("+" + (-answers[i]).ToString()) : (-answers[i]).ToString()) + ")";
+				output += "(x" + ((-answers[i] >= 0f) ? ("+" + (-answers[i]).ToString()) : (-answers[i]).ToString()) + ")";
 				output += (power > 1) ? ("^" + power.ToString()) : "";
 				power = 1;
 			}
@@ -65,26 +88,26 @@ namespace Utils.Calculators
 			return output;
 		}
 
-		public static int[] GetAnswers(string polynomial, out int[][] table) 
+		public static float[] GetAnswers(string polynomial, out float[][] table) 
 		{
-			int[] values = { 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7, 8, -8, 9, -9 };
-			List<List<int>> tableList = new List<List<int>>();
-			List<int> answers = new List<int>();
-			string newPolynomial = "";
+			float[] coefficients = GetCoefficients(polynomial);
+			float[] values = GetValues(coefficients[0], coefficients[coefficients.Length - 1]);
+			List<List<float>> tableList = new List<List<float>>();
+			List<float> answers = new List<float>();
 
-			tableList.Add((new int[] { 0 }).ToList());
-			tableList[tableList.Count - 1].AddRange(GetCoefficients(polynomial));
+			tableList.Add((new float[] { 0f }).ToList());
+			tableList[tableList.Count - 1].AddRange(coefficients);
 
 			for (int i = 0; i < values.Length; i++) 
 			{
-				while (CheckAnswer(polynomial, values[i], out newPolynomial)) 
+				while (CheckAnswer(coefficients, values[i], out polynomial)) 
 				{
-					tableList.Add((new int[] { values[i] }).ToList());
-					tableList[tableList.Count - 1].AddRange(GetCoefficients(newPolynomial));
+					coefficients = GetCoefficients(polynomial);
+					tableList.Add((new float[] { values[i] }).ToList());
+					tableList[tableList.Count - 1].AddRange(coefficients);
 					tableList[tableList.Count - 1].Add(0);
 
 					answers.Add(values[i]);
-					polynomial = newPolynomial;
 				}
 			}
 
@@ -92,7 +115,7 @@ namespace Utils.Calculators
 			return answers.ToArray();
 		}
 
-		private static string GetTable(int[][] table) 
+		private static string GetTable(float[][] table) 
 		{
 			string output = "";
 			for (int y = 0; y < table.Length; y++) 
@@ -116,11 +139,15 @@ namespace Utils.Calculators
 		{
 			table = null;
 			if (string.IsNullOrEmpty(polynomial)) { return null; }
+			if (polynomial.IndexOf(">") < 0 && polynomial.IndexOf("<") < 0 && polynomial.IndexOf("=") < 0) { return null; }
 
-			int[][] t;
-			int[] answers = GetAnswers(polynomial.Replace(" ", ""), out t);
+			try { polynomial = polynomial.Remove(System.Math.Max(System.Math.Max(polynomial.IndexOf(">"), polynomial.IndexOf("<")), polynomial.IndexOf("="))); }
+			catch { return null; }
+
+			float[][] t;
+			float[] answers = GetAnswers(polynomial.Replace(" ", ""), out t);
 			table = GetTable(t);
-			return (answers.Length > 0) ? Format(answers.ToArray()) : null;
+			return (answers.Length > 0) ? Format(answers) : null;
 		}
 
 		public static string Solve(string polynomial) { string table, simplified; return Solve(polynomial, out simplified, out table); }
@@ -132,15 +159,19 @@ namespace Utils.Calculators
 			polynomial = polynomial.Replace(" ", "");
 
 			int index = System.Math.Max(polynomial.IndexOf(">"), polynomial.IndexOf("<"));
-			if (index == -1) { return null; }
+			if (index == -1) 
+			{
+				if (polynomial.IndexOf("=") >= 0) { simplified = Simplify(polynomial, out table); return simplified + " = 0"; }
+				return null;
+			}
 
 			string operation = polynomial[index].ToString();
 			try { operation += (polynomial[index + 1] == '=') ? "=" : ""; }
 			catch {}
 
-			int[][] t;
-			int[] answers = GetAnswers(polynomial.Remove(index), out t);
-			simplified = (answers.Length > 0) ? Format(answers.ToArray()) : null;
+			float[][] t;
+			float[] answers = GetAnswers(polynomial.Remove(index), out t);
+			simplified = (answers.Length > 0) ? Format(answers) : null;
 			simplified += " " + operation + " 0";
 			table = GetTable(t);
 			Array.Sort(answers);
@@ -159,10 +190,8 @@ namespace Utils.Calculators
 				ranges.Add(new Range(
 					down,
 					up,
-					(positive % 2) == 0
+					(positive++ % 2) == 0
 				));
-
-				positive++;
 			}
 
 			string output = "";
