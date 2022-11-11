@@ -266,68 +266,34 @@ namespace Utils
 			return output;
 		}
 
-		public static int HexToDecimal(string hex) 
+		public static int HexToInt(string x) 
 		{
-			if (hex == "" || hex == " ") { return 0; }
-			int sum = 0;
-			int pow = 0;
-			int i = hex.Length - 1;
-			char[] hexBy1 = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
-			hex = hex.ToLower();
-			while (i > -1) 
+			if (string.IsNullOrEmpty(x)) { throw new NullReferenceException("Hex string must not be null."); }
+
+			string chars = "0123456789abcdef";
+			int output = 0;
+
+			x = x.ToLower();
+			for (int i = (x[0] == '-') ? 1 : 0; i < x.Length; i++) 
 			{
-				sum += Array.IndexOf(hexBy1, hex[i]) * (int)System.Math.Pow(16, pow);
-				pow++;
-				i--;
+				int n = chars.IndexOf(x[i].ToString());
+				if (n == -1) { throw new ArgumentException("Hex string is invalid. - '" + x + "'"); }
+				output = (output << 4) + n;
 			}
 
-			return sum;
+			unchecked { return (x[0] == '-') ? ((int)0xffffffff - (output - 1)) : output; }
 		}
 
-		public static string DecimalToHex(int dec) 
+		public static string IntToHex(int x) 
 		{
-			string[] hexBy1 = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f" };
-			int num = (int)System.Math.Floor((double)dec / 16);
-			string hex = hexBy1[dec % 16];
+			string chars = "0123456789abcdef";
+			string output = "";
+			bool negative = x < 0;
 
-			while (num > 0) 
-			{
-				hex = hexBy1[num % 16] + hex;
-				num = (int)System.Math.Floor((double)num / 16);
-			}
+			if (negative) { x *= -1; }
+			for (; x != 0; x >>= 4) { output = chars[x & 0xf] + output; }
 
-			return hex;
-		}
-
-		public static int BinaryToDecimal(string bin) 
-		{
-			if (bin == "" || bin == " ") { return 0; }
-			int sum = 0;
-			int pow = 0;
-			int i = bin.Length - 1;
-			bin = bin.ToLower();
-			while (i > -1) 
-			{
-				sum += ((bin[i] == '1') ? 1 : 0) * (int)Math.Pow(2, pow);
-				pow++;
-				i--;
-			}
-
-			return sum;
-		}
-
-		public static string DecimalToBinary(int dec) 
-		{
-			int num = (int)System.Math.Floor((double)dec / 2);
-			string bin = ((dec % 2 == 0) ? "0" : "1");
-
-			while (num > 0) 
-			{
-				bin = ((num % 2 == 0) ? 0 : 1) + bin;
-				num = (int)System.Math.Floor((double)num / 2);
-			}
-
-			return bin;
+			return (output == "") ? "0" : ((negative) ? ("-" + output) : output);
 		}
 
 		public static float itof(int num) { return float.Parse(num.ToString()); }

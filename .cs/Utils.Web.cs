@@ -19,8 +19,8 @@ namespace Utils.Web
 			{
 				if (input[i] == '%' && i + 2 < input.Length) 
 				{
-					byte b = (byte)Format.HexToDecimal(Convert.ToString(input[i + 1]) + Convert.ToString(input[i + 2]));
-					if ((b == 0xd0 || b == 0xd1) && i + 5 < input.Length) { output += Encoding.UTF8.GetString(new byte[] { b, (byte)Format.HexToDecimal(Convert.ToString(input[i + 4]) + Convert.ToString(input[i + 5])) }); i+= 3; }
+					byte b = (byte)Format.HexToInt(Convert.ToString(input[i + 1]) + Convert.ToString(input[i + 2]));
+					if ((b == 0xd0 || b == 0xd1) && i + 5 < input.Length) { output += Encoding.UTF8.GetString(new byte[] { b, (byte)Format.HexToInt(Convert.ToString(input[i + 4]) + Convert.ToString(input[i + 5])) }); i+= 3; }
 					else { output += Convert.ToString((char)b); }
 					i += 2;
 					continue;
