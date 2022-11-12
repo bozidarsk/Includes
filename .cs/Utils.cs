@@ -22,7 +22,6 @@ namespace Utils
         /*
         [System.Runtime.InteropServices.DllImport("user32.dll")]
 		static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
 		ShowWindow(System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle, 0);
 		*/
 
