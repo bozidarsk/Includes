@@ -284,11 +284,13 @@ namespace Utils
 			return output;
 		}
 
-		public static string UIntToBin(uint x) 
+		public static string UIntToBin(uint x, int minLength = 1) 
 		{
+			if (minLength < 1) { throw new ArgumentOutOfRangeException("minLength must be greater than 0."); }
+
 			string output = "";
 			for (; x != 0; x >>= 1) { output = (((x & 1) == 1) ? "1" : "0") + output; }
-			return (output != "") ? output : "0";
+			return (output.Length < minLength) ? String2.FillString('0', minLength - output.Length) + output : output;
 		}
 
 		public static uint BinToUInt(string x) 
@@ -323,12 +325,14 @@ namespace Utils
 			return output;
 		}
 
-		public static string UIntToHex(uint x) 
+		public static string UIntToHex(uint x, int minLength = 1) 
 		{
+			if (minLength < 1) { throw new ArgumentOutOfRangeException("minLength must be greater than 0."); }
+
 			string chars = "0123456789abcdef";
 			string output = "";
 			for (; x != 0; x >>= 4) { output = chars[(int)(x & 0xf)] + output; }
-			return (output != "") ? output : "0";
+			return (output.Length < minLength) ? String2.FillString('0', minLength - output.Length) + output : output;
 		}
 
 		public static float itof(int num) { return float.Parse(num.ToString()); }
