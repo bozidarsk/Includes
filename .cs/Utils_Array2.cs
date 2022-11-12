@@ -24,7 +24,7 @@ namespace Utils
     	public static T[] GetArrayAt<T>(T[] array, int start, int end) 
     	{
     		if (array == null || array.Length == 0) { throw new NullReferenceException("Array must not be null."); }
-    		if (start < 0 || start > end || end >= array.Length) { throw new IndexOutOfRangeException("Start index must be grater than 0 and less than end index and end index must be less than the length of the array."); }
+    		if (start < 0 || start > end || end >= array.Length) { throw new ArgumentOutOfRangeException("Start index must be grater than 0 and less than end index and end index must be less than the length of the array."); }
 
     		T[] output = new T[end - start + 1];
     		int index = 0;

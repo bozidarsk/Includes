@@ -51,7 +51,7 @@ namespace Utils
 		public static string GetStringAt(string str, int start, int end) 
 		{
 		    if (IsNullOrEmpty(str)) { throw new NullReferenceException("String must not be null."); }
-    		if (start < 0 || start > end || end >= str.Length) { throw new IndexOutOfRangeException("Start index must be greater than 0 and less than end index and end index must be less than the length of the string."); }
+    		if (start < 0 || start > end || end >= str.Length) { throw new ArgumentOutOfRangeException("Start index must be greater than 0 and less than end index and end index must be less than the length of the string."); }
 
 		    string output = "";
 		    for (int i = start; i <= end; i++) { output += str[i]; }
