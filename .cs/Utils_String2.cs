@@ -110,7 +110,7 @@ namespace Utils
 		public static string FillString(char target, int count) 
 		{
 			if (target == '\0') { throw new NullReferenceException("Char must not be null."); }
-			if (count <= 0) { throw new ArgumentException("Count must be greater than 0."); }
+			if (count < 0) { throw new ArgumentException("Count must be greater than or equal to 0."); }
 
 			string output = "";
 			for (int i = 0; i < count; i++) { output += target; }
