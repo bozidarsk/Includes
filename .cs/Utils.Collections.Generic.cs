@@ -2,10 +2,7 @@ namespace Utils.Collections.Generic
 {
 	public sealed class Vector4<T> 
     {
-        public T x;
-        public T y;
-        public T z;
-        public T w;
+        public T x, y, z, w;
 
         public override string ToString() { return "(" + x.ToString() + ", " + y.ToString() + ", " + z.ToString() + ", " + w.ToString() + ")"; }
 
@@ -21,9 +18,7 @@ namespace Utils.Collections.Generic
 
     public sealed class Vector3<T> 
     {
-        public T x;
-        public T y;
-        public T z;
+        public T x, y, z;
 
         public override string ToString() { return "(" + x.ToString() + ", " + y.ToString() + ", " + z.ToString() + ")"; }
 
@@ -38,8 +33,7 @@ namespace Utils.Collections.Generic
 
     public sealed class Vector2<T> 
     {
-        public T x;
-        public T y;
+        public T x, y;
 
         public override string ToString() { return "(" + x.ToString() + ", " + y.ToString() + ")"; }
 
@@ -53,8 +47,7 @@ namespace Utils.Collections.Generic
 
     public sealed class Range<T> 
     {
-        public T min;
-        public T max;
+        public T min, max;
 
         public override string ToString() { return "(" + min.ToString() + ", " + max.ToString() + ")"; }
 

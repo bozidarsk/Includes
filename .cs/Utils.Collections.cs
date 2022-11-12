@@ -24,9 +24,7 @@ namespace Utils.Collections
 	#if !UNITY
 	public sealed class Vector3 
     {
-        public float x { set; get; }
-        public float y { set; get; }
-        public float z { set; get; }
+        public float x, y, z;
 
         public static readonly Vector3 zero = new Vector3(0, 0, 0);
         public static readonly Vector3 one = new Vector3(1, 1, 1);
@@ -65,8 +63,7 @@ namespace Utils.Collections
 
     public sealed class Vector2 
     {
-        public float x { set; get; }
-        public float y { set; get; }
+        public float x, y;
 
         public static readonly Vector2 zero = new Vector2(0, 0);
         public static readonly Vector2 one = new Vector2(1, 1);
@@ -97,6 +94,19 @@ namespace Utils.Collections
         {
             this.x = x;
             this.y = y;
+        }
+    }
+
+    public sealed class Color 
+    {
+        public float r, g, b, a;
+
+        public Color(float r, float g, float b, float a) 
+        {
+            this.r = r;
+            this.g = g;
+            this.b = b;
+            this.a = a;
         }
     }
     #endif
