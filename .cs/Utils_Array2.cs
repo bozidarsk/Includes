@@ -5,6 +5,15 @@ namespace Utils
 {
 	public static class Array2 
     {
+        public static bool Equals<T>(T[] lArrray, T[] rArray) 
+        {
+            if (lArrray == null || rArray == null) { throw new NullReferenceException("Arrays must not be null."); }
+            if (lArrray.Length != rArray.Length) { return false; }
+
+            for (int i = 0; i < lArrray.Length; i++) { if (!lArrray[i].Equals(rArray[i])) { return false; } }
+            return true;
+        }
+
     	public static T[] Join<T>(params T[][] array) 
     	{
     		if (array == null || array.Length == 0) { throw new NullReferenceException("Array must not be null."); }
