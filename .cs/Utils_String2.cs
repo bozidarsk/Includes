@@ -10,14 +10,13 @@ namespace Utils
 
         public static bool IsNullOrEmpty(string str) { return str == null || str == "" || str.Length == 0; }
 
-        public static string Join(params string[] strs) { return Join("", strs); }
-        public static string Join(string separator, params string[] strs) 
+        public static string Join(params string[] strs) 
         {
-        	if (separator == null || strs == null || strs.Length == 0) { throw new NullReferenceException("Arguments must not be null."); }
+        	if (strs == null || strs.Length == 0) { throw new NullReferenceException("Strings must not be null."); }
 
         	string output = "";
-        	for (int i = 0; i < strs.Length; i++) { output += strs[i] + separator; }
-        	return output.Remove(output.Length - separator.Length, separator.Length);
+        	for (int i = 0; i < strs.Length; i++) { output += strs[i]; }
+        	return output;
         }
 
 		public static string Reverse(string str) 
