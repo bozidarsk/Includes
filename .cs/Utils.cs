@@ -107,15 +107,7 @@ namespace Utils
             Console.SetCursorPosition(0, currentLineCursor);
         }
 
-        public static void CMD(string command) 
-        {
-		    Process proccess = new Process();
-		    proccess.StartInfo = new ProcessStartInfo("C:\\Windows\\System32\\cmd.exe", command);
-		    proccess.StartInfo.UseShellExecute = false;
-		    proccess.Start();
-		    proccess.WaitForExit();
-        }
-
+        [Obsolete("Not working.")] public static void CMD(string command) { StartEXE("C:\\Windows\\System32\\cmd.exe", command); }
         public static void StartEXE(string path, string args) 
         {
         	Process proccess = new Process();
