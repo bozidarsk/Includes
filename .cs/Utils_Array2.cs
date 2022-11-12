@@ -50,5 +50,18 @@ namespace Utils
 
             return array;
         }
+
+        public static T[] Reverse<T>(T[] array) 
+        {
+            T[] output = new T[array.Length];
+            for (int i = 0; i < array.Length / 2; i++) 
+            {
+                output[i] = array[array.Length - i - 1];
+                output[array.Length - i - 1] = array[i];
+            }
+
+            if (array.Length % 2 != 0) { output[array.Length / 2] = array[array.Length / 2]; }
+            return output;
+        }
     }
 }
