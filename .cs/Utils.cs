@@ -288,7 +288,7 @@ namespace Utils
 		{
 			string output = "";
 			for (; x != 0; x >>= 1) { output = (((x & 1) == 1) ? "1" : "0") + output; }
-			return output;
+			return (output != "") ? output : "0";
 		}
 
 		public static uint BinToUInt(string x) 
@@ -328,7 +328,7 @@ namespace Utils
 			string chars = "0123456789abcdef";
 			string output = "";
 			for (; x != 0; x >>= 4) { output = chars[(int)(x & 0xf)] + output; }
-			return output;
+			return (output != "") ? output : "0";
 		}
 
 		public static float itof(int num) { return float.Parse(num.ToString()); }
