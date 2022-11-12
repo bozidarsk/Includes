@@ -146,6 +146,24 @@ namespace Utils
 			for (int i = 0; i < newFolders.Count; i++) { output += newFolders[i] + "\\"; }
 			return output.TrimEnd('\\');
 		}
+
+		public static byte[] GetBytes(int size, params long[] items) 
+		{
+			if (items == null || items.Length == 0) { throw new NullReferenceException("Items must not be null."); }
+			if (size <= 0) { throw new ArgumentException("Size must be greater than 0."); }
+			byte[] bytes = new byte[items.Length * size];
+			int index = 0;
+
+			for (int i = 0; i < items.Length; i++) 
+			{
+				for (int b = size - 1; b >= 0; b--) 
+				{
+					bytes[index++] = (byte)((items[i] >> (b * 8)) & 0xff);
+				}
+			}
+
+			return bytes;
+		}
     }
 
     public sealed class Timer 
@@ -266,34 +284,51 @@ namespace Utils
 			return output;
 		}
 
-		public static int HexToInt(string x) 
+		public static string UIntToBin(uint x) 
+		{
+			string output = "";
+			for (; x != 0; x >>= 1) { output = (((x & 1) == 1) ? "1" : "0") + output; }
+			return output;
+		}
+
+		public static uint BinToUInt(string x) 
+		{
+			if (string.IsNullOrEmpty(x)) { throw new NullReferenceException("Bin string must not be null."); }
+
+			uint output = 0;
+			for (int i = 0; i < x.Length; i++) 
+			{
+				if (x[i] != '0' && x[i] != '1') { throw new ArgumentException("Bin string is invalid. - '" + x + "'"); }
+				output = (output << 1) + (uint)((x[i] == '1') ? 1 : 0);
+			}
+
+			return output;
+		}
+
+		public static uint HexToUInt(string x) 
 		{
 			if (string.IsNullOrEmpty(x)) { throw new NullReferenceException("Hex string must not be null."); }
 
 			string chars = "0123456789abcdef";
-			int output = 0;
+			uint output = 0;
 
 			x = x.ToLower();
-			for (int i = (x[0] == '-') ? 1 : 0; i < x.Length; i++) 
+			for (int i = 0; i < x.Length; i++) 
 			{
 				int n = chars.IndexOf(x[i].ToString());
 				if (n == -1) { throw new ArgumentException("Hex string is invalid. - '" + x + "'"); }
-				output = (output << 4) + n;
+				output = (output << 4) + (uint)n;
 			}
 
-			unchecked { return (x[0] == '-') ? ((int)0xffffffff - (output - 1)) : output; }
+			return output;
 		}
 
-		public static string IntToHex(int x) 
+		public static string UIntToHex(uint x) 
 		{
 			string chars = "0123456789abcdef";
 			string output = "";
-			bool negative = x < 0;
-
-			if (negative) { x *= -1; }
-			for (; x != 0; x >>= 4) { output = chars[x & 0xf] + output; }
-
-			return (output == "") ? "0" : ((negative) ? ("-" + output) : output);
+			for (; x != 0; x >>= 4) { output = chars[(int)(x & 0xf)] + output; }
+			return output;
 		}
 
 		public static float itof(int num) { return float.Parse(num.ToString()); }
