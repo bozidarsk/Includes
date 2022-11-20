@@ -17,6 +17,16 @@ using Utils.Collections;
 
 namespace Utils 
 {
+	public enum ExitReason 
+	{
+		Success,
+		Error,
+		InvalidArguments,
+		HelpMessage,
+		Abort,
+		Exception
+	}
+
     public static class Tools 
     {
         /*
@@ -24,6 +34,32 @@ namespace Utils
 		static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 		ShowWindow(System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle, 0);
 		*/
+
+		private static string[] msgs = 
+		{
+			null,
+			null,
+			"Invalid arguments.",
+			"Error codes:\n\t0 - Success.\n\t1 - Error.\n\t2 - Invalid arguments.\n\t3 - Help message displayed.\n\t4 - Abort.\n\t5 - Exception.",
+			"Abort.",
+			null
+		};
+
+		public static void Exit(ExitReason reason) 
+		{
+			int code = (int)reason;
+			if (msgs[code] != null) { Console.Error.WriteLine(msgs[code]); }
+			Environment.Exit(code);
+		}
+
+		public static bool YesNo(string input) 
+		{
+			if (string.IsNullOrEmpty(input)) { throw new NullReferenceException("Input must not be null."); }
+			input = input.ToLower();
+			if (input == "yes" || input == "y" || input == "-y" || input == "--y" || input == "/y" || input == "/yes") { return true; }
+			if (input == "no" || input == "n" || input == "-n" || input == "--n" || input == "/n" || input == "/no") { return false; }
+			throw new ArgumentException("Input is neither y or n. (yes or no)");
+		}
 
 		[DllImport("user32.dll", CharSet = CharSet.Auto)]
 		private static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
