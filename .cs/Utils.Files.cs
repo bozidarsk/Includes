@@ -23,6 +23,12 @@ namespace Utils.Files
 	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field)]
 	public sealed class DeserializeAttribute : Attribute { public DeserializeAttribute() {} }
 
+	public sealed class JsonNameAttribute : Attribute 
+	{
+		public string name;
+		public JsonNameAttribute(string name) { this.name = name; }
+	}
+
 	public sealed class FileSyntaxException : Exception 
 	{
 		public FileSyntaxException() : base() {}
@@ -57,7 +63,11 @@ namespace Utils.Files
 				}
 				else { value = ToJson(fields[i].GetValue(obj), prettyPrint); }
 
-				output += Indent(stackc) + "\"" + fields[i].Name + "\":" + ((prettyPrint) ? " " : "") + value;
+				string name = fields[i].Name;
+				object[] attrs = fields[i].GetCustomAttributes(typeof(JsonNameAttribute), false);
+				if (attrs.Length > 0) { name = ((JsonNameAttribute)attrs[0]).name; }
+
+				output += Indent(stackc) + "\"" + name + "\":" + ((prettyPrint) ? " " : "") + value;
 			}
 
 			return (prettyPrint) ? (((stackc > 1) ? "\n" : "") + Indent(stackc - 1) + "{\n" + output + "\n" + Indent(stackc - 1) + "}") : ("{" + output + "}");
@@ -96,8 +106,12 @@ namespace Utils.Files
 
 			for (int i = 0; i < fields.Length; i++) 
 			{
+				string name = fields[i].Name;
+				object[] attrs = fields[i].GetCustomAttributes(typeof(JsonNameAttribute), false);
+				if (attrs.Length > 0) { name = ((JsonNameAttribute)attrs[0]).name; }
+
 				dynamic pair = null;
-				try { pair = rootPairs.Where(x => x.name == fields[i].Name).ToArray()[0]; }
+				try { pair = rootPairs.Where(x => x.name == name).ToArray()[0]; }
 				catch { continue; }
 
 				if (pair.type.StartsWith("object")) { fields[i].SetValue(obj, FillValues(fields[i].FieldType, pair.childPairs)); }
@@ -253,9 +267,6 @@ namespace Utils.Files
 
 					if (elementType != "string") { elements = elements.Select(x => x.Replace(" ", "").Replace("\r", "").Replace("\t", "").Replace("\n", "")).ToArray(); }
 					else { elements = elements.Select(x => String2.GetStringAt(x, x.IndexOf("\"") + 1, x.LastIndexOf("\"") - 1)).ToArray(); }
-
-					elements[0] = elements[0].Remove(0, 1);
-					elements[elements.Length - 1] = elements[elements.Length - 1].Remove(elements[elements.Length - 1].Length - 1, 1);
 
 					for (int i = 0; i < pairs.Length; i++) 
 					{
