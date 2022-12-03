@@ -372,16 +372,16 @@ namespace Utils.Web
 							if (!File.Exists(file)) { return Response.NotFound("File not found. - '" + file + "'"); }
 						}
 
-						if (response.Mime == "application/pdf") { response.AddHeader("Content-Disposition: inline"); response.Data = File.ReadAllBytes(file); return response; }
-						if (response.Mime.StartsWith("image/")) { response.Data = File.ReadAllBytes(file); return response; }
-						if (response.Mime.StartsWith("audio/")) { response.Mime = "audio/mpeg"; response.Data = File.ReadAllBytes(file); return response; }
-						if (response.Mime.StartsWith("video/")) { response.Mime = "video/mp4"; response.Data = File.ReadAllBytes(file); return response; }
 						if (forceDownload || response.Mime == "application/x-download") 
 						{
 							response.AddHeader("Content-Disposition: attachment; filename=\"" + String2.GetStringAt(file, file.LastIndexOf("\\") + 1, file.Length - 1) + "\"");
 							response.Data = File.ReadAllBytes(file);
 							return response;
 						}
+						if (response.Mime == "application/pdf") { response.AddHeader("Content-Disposition: inline"); response.Data = File.ReadAllBytes(file); return response; }
+						if (response.Mime.StartsWith("image/")) { response.Data = File.ReadAllBytes(file); return response; }
+						if (response.Mime.StartsWith("audio/")) { response.Mime = "audio/mpeg"; response.Data = File.ReadAllBytes(file); return response; }
+						if (response.Mime.StartsWith("video/")) { response.Mime = "video/mp4"; response.Data = File.ReadAllBytes(file); return response; }
 
 						response.Mime = "text/plain";
 						response.Data = Encoding.UTF8.GetBytes(File.ReadAllText(file));
