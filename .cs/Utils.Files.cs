@@ -174,7 +174,8 @@ namespace Utils.Files
 				switch (json[i - 1]) 
 				{
 					case '\"':
-						currentPair.content = String2.GetStringAt(json, i, json.IndexOf("\"", i) - 1);
+						try { currentPair.content = String2.GetStringAt(json, i, json.IndexOf("\"", i) - 1); }
+						catch { currentPair.content = ""; }
 						currentPair.type = "string";
 						currentPair.childPairs = null;
 						currentPair.value = currentPair.content;
@@ -267,6 +268,10 @@ namespace Utils.Files
 
 					if (elementType != "string") { elements = elements.Select(x => x.Replace(" ", "").Replace("\r", "").Replace("\t", "").Replace("\n", "")).ToArray(); }
 					else { elements = elements.Select(x => String2.GetStringAt(x, x.IndexOf("\"") + 1, x.LastIndexOf("\"") - 1)).ToArray(); }
+
+					// why did i put this here from the first place ????
+					// elements[0] = elements[0].Remove(0, 1);
+					// elements[elements.Length - 1] = elements[elements.Length - 1].Remove(elements[elements.Length - 1].Length - 1, 1);
 
 					for (int i = 0; i < pairs.Length; i++) 
 					{
