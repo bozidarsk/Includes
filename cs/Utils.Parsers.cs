@@ -2,19 +2,6 @@ using System;
 
 namespace Utils.Parsers 
 {
-	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-	public sealed class SerializeAttribute : Attribute { public SerializeAttribute() {} }
-
-	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-	public sealed class DeserializeAttribute : Attribute { public DeserializeAttribute() {} }
-
-	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-	public sealed class JsonNameAttribute : Attribute 
-	{
-		public string Name;
-		public JsonNameAttribute(string name) { this.Name = name; }
-	}
-
 	public sealed class SyntaxException : Exception 
 	{
 		public SyntaxException() : base() {}

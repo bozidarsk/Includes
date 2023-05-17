@@ -25,14 +25,14 @@ namespace Utils.Graphics
 		public byte Filter { get => filter; }
 		public bool Interlaced { get => interlaced; }
 
-		[Serialize] private int width;                // (4 bytes)
-		[Serialize] private int height;               // (4 bytes)
-		[Serialize] private byte depth = 8;           // (1 byte, values 1, 2, 4, 8, or 16)
-		[Serialize] private byte colorType = 6;       // (1 byte, values 0, 2, 3, 4, or 6)
-		[Serialize] private byte compression = 0;     // (1 byte, value 0)
-		[Serialize] private byte filter = 0;          // (1 byte, value 0)
-		[Serialize] private bool interlaced = false;  // (1 byte, values 0 "no interlace" or 1 "Adam7 interlace") (13 data bytes total)
-		[Serialize] private Color[] colors;
+		[Json.Serialize] private int width;                // (4 bytes)
+		[Json.Serialize] private int height;               // (4 bytes)
+		[Json.Serialize] private byte depth = 8;           // (1 byte, values 1, 2, 4, 8, or 16)
+		[Json.Serialize] private byte colorType = 6;       // (1 byte, values 0, 2, 3, 4, or 6)
+		[Json.Serialize] private byte compression = 0;     // (1 byte, value 0)
+		[Json.Serialize] private byte filter = 0;          // (1 byte, value 0)
+		[Json.Serialize] private bool interlaced = false;  // (1 byte, values 0 "no interlace" or 1 "Adam7 interlace") (13 data bytes total)
+		[Json.Serialize] private Color[] colors;
 
 		public Color this[int x, int y] 
 		{

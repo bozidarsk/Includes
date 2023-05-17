@@ -8,6 +8,19 @@ namespace Utils.Parsers
 {
 	public static class Json 
 	{
+		[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+		public sealed class SerializeAttribute : Attribute { public SerializeAttribute() {} }
+
+		[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+		public sealed class DeserializeAttribute : Attribute { public DeserializeAttribute() {} }
+
+		[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+		public sealed class NameAttribute : Attribute 
+		{
+			public string Name;
+			public NameAttribute(string name) { this.Name = name; }
+		}
+
 		public static string ToJson(object obj, bool prettyPrint = false) => ToJson(obj, prettyPrint, "").Remove(0, 1);
 		private static string ToJson(object obj, bool prettyPrint, string tab) 
 		{
@@ -28,14 +41,14 @@ namespace Utils.Parsers
 			}
 
 			List<FieldInfo> fields = type.GetFields(BindingFlags.Public | BindingFlags.GetField | BindingFlags.Instance).ToList();
-			fields.AddRange(type.GetFields(BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).Where(x => HasAttribute<SerializeAttribute>(x, out SerializeAttribute s)).ToArray());
+			fields.AddRange(type.GetFields(BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).Where(x => HasAttribute<Json.SerializeAttribute>(x, out Json.SerializeAttribute s)).ToArray());
 
 			for (int i = 0; i < fields.Count; i++) 
 			{
-				if (HasAttribute<DeserializeAttribute>(fields[i], out DeserializeAttribute d)) { continue; }
+				if (HasAttribute<Json.DeserializeAttribute>(fields[i], out Json.DeserializeAttribute d)) { continue; }
 
 				string name = fields[i].Name;
-				if (HasAttribute<JsonNameAttribute>(fields[i], out JsonNameAttribute n)) { name = n.Name; }
+				if (HasAttribute<Json.NameAttribute>(fields[i], out Json.NameAttribute n)) { name = n.Name; }
 
 				output += ((prettyPrint) ? ("\t" + tab) : "") + "\"" + name + "\": " + ToJson(fields[i].GetValue(obj), prettyPrint, (prettyPrint) ? (tab + "\t") : "");
 				if (i < fields.Count - 1) { output += "," + ((prettyPrint) ? "\n" : ""); }
@@ -72,14 +85,14 @@ namespace Utils.Parsers
 		{
 			object obj = Activator.CreateInstance(type);
 			List<FieldInfo> fields = type.GetFields(BindingFlags.Public | BindingFlags.GetField | BindingFlags.Instance).ToList();
-			fields.AddRange(type.GetFields(BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).Where(x => HasAttribute<SerializeAttribute>(x, out SerializeAttribute s)).ToArray());
+			fields.AddRange(type.GetFields(BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).Where(x => HasAttribute<Json.SerializeAttribute>(x, out Json.SerializeAttribute s)).ToArray());
 
 			for (int i = 0; i < fields.Count; i++) 
 			{
-				if (HasAttribute<DeserializeAttribute>(fields[i], out DeserializeAttribute d)) { continue; }
+				if (HasAttribute<Json.DeserializeAttribute>(fields[i], out Json.DeserializeAttribute d)) { continue; }
 
 				string name = fields[i].Name;
-				if (HasAttribute<JsonNameAttribute>(fields[i], out JsonNameAttribute n)) { name = n.Name; }
+				if (HasAttribute<Json.NameAttribute>(fields[i], out Json.NameAttribute n)) { name = n.Name; }
 
 				Pair pair = null;
 				try { pair = root.Childs.Where(x => x.Name == name).ToArray()[0]; }
