@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Reflection;
@@ -8,53 +9,20 @@ namespace Utils.Parsers
 {
 	public static class Json 
 	{
-		[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-		public sealed class SerializeAttribute : Attribute { public SerializeAttribute() {} }
+		public static string ToJson(object obj) => Serialize(obj);
 
-		[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-		public sealed class DeserializeAttribute : Attribute { public DeserializeAttribute() {} }
-
-		[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-		public sealed class NameAttribute : Attribute 
+		public static void AddSerializer(Serializer serializer) 
 		{
-			public string Name;
-			public NameAttribute(string name) { this.Name = name; }
+			if (serializer == null || serializer.Type == null || serializer.Method == null)
+				throw new ArgumentNullException();
+			serializers.Add(serializer);
 		}
 
-		public static string ToJson(object obj, bool prettyPrint = false) => ToJson(obj, prettyPrint, "").Remove(0, 1);
-		private static string ToJson(object obj, bool prettyPrint, string tab) 
+		public static void AddDeserializer(Deserializer deserializer) 
 		{
-			if (obj == null) { return "null"; }
-
-			Type type = obj.GetType();
-			string output = "";
-
-			if (IsBasic(type)) { return obj.ToString().ToLower(); }
-			if (type.IsEnum) { return type.GetFields()[0].GetValue(obj).ToString(); }
-			if (type == typeof(string)) { return "\"" + obj.ToString() + "\""; }
-			if (type == typeof(char)) { return "'" + obj.ToString() + "'"; }
-			if (type.IsArray) 
-			{
-				Array array = (Array)obj;
-				if (array.GetLength(0) == 0 && array.Rank == 1) { return "[]"; }
-				return ArrayToString(array, new int[array.Rank], 1, prettyPrint, (prettyPrint) ? (tab + "\t") : "");
-			}
-
-			List<FieldInfo> fields = type.GetFields(BindingFlags.Public | BindingFlags.GetField | BindingFlags.Instance).ToList();
-			fields.AddRange(type.GetFields(BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).Where(x => HasAttribute<Json.SerializeAttribute>(x, out Json.SerializeAttribute s)).ToArray());
-
-			for (int i = 0; i < fields.Count; i++) 
-			{
-				if (HasAttribute<Json.DeserializeAttribute>(fields[i], out Json.DeserializeAttribute d)) { continue; }
-
-				string name = fields[i].Name;
-				if (HasAttribute<Json.NameAttribute>(fields[i], out Json.NameAttribute n)) { name = n.Name; }
-
-				output += ((prettyPrint) ? ("\t" + tab) : "") + "\"" + name + "\": " + ToJson(fields[i].GetValue(obj), prettyPrint, (prettyPrint) ? (tab + "\t") : "");
-				if (i < fields.Count - 1) { output += "," + ((prettyPrint) ? "\n" : ""); }
-			}
-
-			return (prettyPrint) ? ("\n" + tab + "{\n" + output + "\n" + tab + "}") : ("{" + output + "}");
+			if (deserializer == null || deserializer.Type == null || deserializer.Method == null)
+				throw new ArgumentNullException();
+			deserializers.Add(deserializer);
 		}
 
 		public static T FromJsonFile<T>(string file) => FromJson<T>(System.IO.File.ReadAllText(file));
@@ -62,90 +30,194 @@ namespace Utils.Parsers
 		{
 			TokenDefinition[] definitions = 
 			{
-				new TokenDefinition("\"(\\w|[!@#$%^&*()\\-_=+/|`~\\[\\]{},<.>/?;:]|\\[\"nrtx])*\"", "STRING"),
-				new TokenDefinition(":", "COLON", ":"),
-				new TokenDefinition(",", "COMMA", ","),
-				new TokenDefinition("\\{", "LCB", "{"),
-				new TokenDefinition("\\}", "RCB", "}"),
-				new TokenDefinition("\\[", "LSB", "["),
-				new TokenDefinition("\\]", "RSB", "]"),
-				new TokenDefinition("true|false", "BOOL"),
-				new TokenDefinition("null", "NULL", "null"),
-				new TokenDefinition("-?[0-9]*(\\.[0-9]+)?([eE][+-][0-9]+)?", "NUMBER"),
+				// new TokenDefinition(@"\x22(\w|[!@#$%^&*()\-_=+/|`~\[\]{},<.>/?;:]|\\[\x22nrtv]|\\x[0-9a-fA-F]+])*\x22", "STRING"),
+				new TokenDefinition(@"\x22(\\\x22|[^\x22])*\x22", "STRING"),
+				new TokenDefinition(@":", "COLON", ":"),
+				new TokenDefinition(@",", "COMMA", ","),
+				new TokenDefinition(@"\{", "LCB", "{"),
+				new TokenDefinition(@"\}", "RCB", "}"),
+				new TokenDefinition(@"\[", "LSB", "["),
+				new TokenDefinition(@"\]", "RSB", "]"),
+				new TokenDefinition(@"true|false", "BOOL"),
+				new TokenDefinition(@"null", "NULL", "null"),
+				new TokenDefinition(@"-?[0-9]*(\.[0-9]+)?([eE][+-][0-9]+)?", "NUMBER"), // hex?
 			};
 
-			json = Regex.Replace(json, "\\/\\/.*\\r?\\n", "");
-			json = Regex.Replace(json, "\\/\\*(.|\\s)*\\*\\/", "");
+			json = Regex.Replace(json, @"\/\/.*\r?\n", "");
+			json = Regex.Replace(json, @"\/\*(.|\s)*\*\/", "");
 
-			List<Token> tokens = Lexer.Lex(json, definitions);
-			return (T)FillValues(typeof(T), GetFirstPair(tokens));
+			List<Token> tokens = Lexer.Lex(json, definitions).ToList();
+			return (T)Deserialize(typeof(T), GetFirstJsonPair(tokens));
 		}
 
-		private static object FillValues(Type type, Pair root) 
+		private static List<Serializer> serializers = new List<Serializer>() 
 		{
-			object obj = Activator.CreateInstance(type);
-			List<FieldInfo> fields = type.GetFields(BindingFlags.Public | BindingFlags.GetField | BindingFlags.Instance).ToList();
-			fields.AddRange(type.GetFields(BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance).Where(x => HasAttribute<Json.SerializeAttribute>(x, out Json.SerializeAttribute s)).ToArray());
+			new Serializer("System.String", x => "\"" + (string)x + "\""), // escape special chars
+			new Serializer("System.Char", x => "\"" +  ((char)x).ToString() + "\""),
+			new Serializer("System.UInt64", x => ((ulong)x).ToString()),
+			new Serializer("System.Int64", x => ((long)x).ToString()),
+			new Serializer("System.UInt32", x => ((uint)x).ToString()),
+			new Serializer("System.Int32", x => ((int)x).ToString()),
+			new Serializer("System.UInt16", x => ((ushort)x).ToString()),
+			new Serializer("System.Int16", x => ((short)x).ToString()),
+			new Serializer("System.Byte", x => ((byte)x).ToString()),
+			new Serializer("System.SByte", x => ((sbyte)x).ToString()),
+			new Serializer("System.Decimal", x => ((decimal)x).ToString()),
+			new Serializer("System.Double", x => ((double)x).ToString()),
+			new Serializer("System.Single", x => ((float)x).ToString()),
+			new Serializer("System.Boolean", x => ((bool)x) ? "true" : "false"),
+			new Serializer("System.IntPtr", x => ((IntPtr)x).ToString()),
+			new Serializer("System.Enum", x => x.GetType().GetFields()[0].GetValue(x).ToString()),
+			new Serializer("System.Collections.ICollection", x => {
+				string json = "";
+				int i = 0;
 
-			for (int i = 0; i < fields.Count; i++) 
+				foreach (object obj in (System.Collections.ICollection)x) 
+				{
+					json += Serialize(obj);
+
+					if (++i < ((System.Collections.ICollection)x).Count) { json += ", "; }
+				}
+
+				return "[" + json + "]";
+			}),
+		};
+
+		private static List<Deserializer> deserializers = new List<Deserializer>() 
+		{
+			new Deserializer("System.Collections.Generic.Dictionary", (Type type, JsonPair[] elements) => 
 			{
-				if (HasAttribute<Json.DeserializeAttribute>(fields[i], out Json.DeserializeAttribute d)) { continue; }
+				Type tKey = type.GenericTypeArguments[0];
+				Type tValue = type.GenericTypeArguments[1];
 
-				string name = fields[i].Name;
-				if (HasAttribute<Json.NameAttribute>(fields[i], out Json.NameAttribute n)) { name = n.Name; }
+				IDictionary dictionary = (IDictionary)Activator.CreateInstance(type);
+				foreach (JsonPair pair in elements) 
+					dictionary.Add(
+						Deserialize(tKey, pair.Childs[0]),
+						Deserialize(tValue, pair.Childs[1])
+					);
 
-				Pair pair = null;
-				try { pair = root.Childs.Where(x => x.Name == name).ToArray()[0]; }
-				catch { continue; }
+				return dictionary;
+			}),
+			new Deserializer("System.Collections.Generic.List", (Type type, JsonPair[] elements) => 
+			{
+				Type t = type.GenericTypeArguments[0];
 
-				fields[i].SetValue(obj, GetValue(fields[i].FieldType, pair));
+				IList list = (IList)Activator.CreateInstance(type);
+				foreach (JsonPair pair in elements) 
+					list.Add(
+						Deserialize(t, pair)
+					);
+
+				return list;
+			}),
+		};
+
+		private static string Serialize(object obj) 
+		{
+			if (obj == null) { return "null"; }
+			Type type = obj.GetType();
+
+			foreach (Serializer serializer in serializers) 
+				if (Type.GetType(serializer.Type).IsAssignableFrom(type)) 
+					return serializer.Invoke(obj);
+
+			string json = "";
+
+			foreach (FieldInfo field in type
+				.GetFields()
+				.Where(x => !x.IsStatic && ((x.IsPublic && !HasAttribute<DeserializeAttribute>(x)) || (x.IsPrivate && HasAttribute<SerializeAttribute>(x))))
+			) {
+				string name = HasAttribute<NameAttribute>(field, out NameAttribute n) ? n.Name : field.Name;
+				json += $"\"{name}\": {Serialize(field.GetValue(obj))},";
 			}
 
-			return obj;
+			foreach (PropertyInfo property in type
+				.GetProperties()
+				.Where(x => x.CanRead && !x.GetMethod.IsStatic && ((x.GetMethod.IsPublic && !HasAttribute<DeserializeAttribute>(x)) || (x.GetMethod.IsPrivate && HasAttribute<SerializeAttribute>(x))))
+			) {
+				string name = HasAttribute<NameAttribute>(property, out NameAttribute n) ? n.Name : property.Name;
+				json += $"\"{name}\": {Serialize(property.GetMethod.Invoke(obj, null))},";
+			}
+
+			return "{" + json.Substring(0, json.Length - 1) + "}";
 		}
 
-		private static object GetValue(Type type, Pair pair) 
+		private static object Deserialize(Type type, JsonPair root) 
 		{
-			switch (pair.Type) 
+			switch (root.Type) 
 			{
-				case "basic":
-					return (type.IsEnum)
-						? Enum.ToObject(type, (int)pair.Value)
-						: System.Convert.ChangeType(pair.Value, type)
-					;
-				case "null":
+				case JsonType.Null:
 					return null;
-				case "object":
-					return FillValues(type, pair);
-				case "array":
-					string strtype = type.ToString();
-					if (strtype.Contains(",")) 
-					{
-						string from = ",";
-						string to = "[][]";
-						while (strtype.Contains(",")) 
-						{
-							strtype = strtype.Replace("[" + from + "]", to);
-							from += ",";
-							to += "[]";
-						}
+				case JsonType.Bool:
+				case JsonType.String:
+				case JsonType.Number:
+					return (type.IsEnum)
+						? Enum.ToObject(type, System.Convert.ChangeType(root.Value, typeof(int)))
+						: System.Convert.ChangeType(root.Value, type)
+					;
+				case JsonType.Object:
+					object obj = Activator.CreateInstance(type);
+
+					foreach (FieldInfo field in type
+						.GetFields()
+						.Where(x => !x.IsStatic && ((x.IsPublic && !HasAttribute<DeserializeAttribute>(x)) || (x.IsPrivate && HasAttribute<SerializeAttribute>(x))))
+					) {
+						string name = HasAttribute<NameAttribute>(field, out NameAttribute n) ? n.Name : field.Name;
+						JsonPair pair = root.Childs.FirstOrDefault(x => x.Name == name);
+
+						if (pair == default(JsonPair))
+							continue;
+
+						field.SetValue(obj, Deserialize(field.FieldType, pair));
 					}
 
-					strtype = strtype.Remove(strtype.Length - 2, 2);
-					Type elementType = Type.GetType(strtype);
+					foreach (PropertyInfo property in type
+						.GetProperties()
+						.Where(x => x.CanWrite && !x.SetMethod.IsStatic && ((x.SetMethod.IsPublic && !HasAttribute<DeserializeAttribute>(x)) || (x.SetMethod.IsPrivate && HasAttribute<SerializeAttribute>(x))))
+					) {
+						string name = HasAttribute<NameAttribute>(property, out NameAttribute n) ? n.Name : property.Name;
+						JsonPair pair = root.Childs.FirstOrDefault(x => x.Name == name);
 
-					Array array = Array.CreateInstance(elementType, pair.Childs.Length);
-					for (int t = 0; t < array.GetLength(0); t++) { array.SetValue(GetValue(elementType, pair.Childs[t]), t); }
+						if (pair == default(JsonPair)) 
+							continue;
+
+						property.SetMethod.Invoke(obj, new object[] { Deserialize(property.PropertyType, pair) });
+					}
+
+					return obj;
+				case JsonType.Array:
+					Type elementType = type.GetElementType();
+
+					if (elementType == null) 
+					{
+						string name = type.ToString();
+						name = name.Substring(0, name.IndexOf("`"));
+
+						Deserializer deserializer = deserializers.FirstOrDefault(x => x.Type == name);
+						if (deserializer == default(Deserializer)) 
+							throw new NotSupportedException($"Deserialization of type '{type}' is not supported.");
+
+						return deserializer.Invoke(type, root.Childs);
+					}
+
+					int index = 0;
+					Array array = Array.CreateInstance(elementType, root.Childs.Length);
+					foreach (JsonPair pair in root.Childs) 
+						array.SetValue(
+							Deserialize(elementType, pair),
+							index++
+						);
 
 					return array;
 				default:
-					throw new ArgumentException("Unhandled pair type: '" + pair.Type + "'");
+					throw new ArgumentException($"Unhandled JsonType '{root.Type}'.");
 			}
 		}
 
-		private static Pair GetFirstPair(List<Token> tokens) 
+		private static JsonPair GetFirstJsonPair(List<Token> tokens) 
 		{
-			List<Pair> childs = new List<Pair>();
+			List<JsonPair> childs = new List<JsonPair>();
 			int start = tokens.FindIndex(x => x.Name == "LCB");
 			int end = EndOfScope(tokens, "LCB", "RCB", start);
 
@@ -158,40 +230,40 @@ namespace Utils.Parsers
 				switch (tokens[i + 2].Name) 
 				{
 					case "STRING":
-						childs.Add(new Pair(name, "basic", tokens[i + 2].Value.Substring(1, tokens[i + 2].Value.Length - 2)));
+						childs.Add(new JsonPair(name, JsonType.String, tokens[i + 2].Value.Substring(1, tokens[i + 2].Value.Length - 2)));
 						i += 2;
 						continue;
 					case "NUMBER":
-						childs.Add(new Pair(name, "basic", double.Parse(tokens[i + 2].Value)));
+						childs.Add(new JsonPair(name, JsonType.Number, double.Parse(tokens[i + 2].Value)));
 						i += 2;
 						continue;
 					case "BOOl":
-						childs.Add(new Pair(name, "basic", bool.Parse(tokens[i + 2].Value)));
+						childs.Add(new JsonPair(name, JsonType.Bool, bool.Parse(tokens[i + 2].Value)));
 						i += 2;
 						continue;
 					case "NULL":
-						childs.Add(new Pair(name, "null", null));
+						childs.Add(new JsonPair(name, JsonType.Null, null));
 						i += 2;
 						continue;
 					case "LCB":
 						end2 = EndOfScope(tokens, "LCB", "RCB", i + 2);
-						childs.Add(new Pair(name, "object", GetFirstPair(tokens.GetRange(i + 2, (end2 - (i + 2)) + 1)).Childs));
+						childs.Add(new JsonPair(name, JsonType.Object, GetFirstJsonPair(tokens.GetRange(i + 2, (end2 - (i + 2)) + 1)).Childs));
 						i += 1 + (end2 - (i + 2)) + 1;
 						continue;
 					case "LSB":
 						end2 = EndOfScope(tokens, "LSB", "RSB", i + 2);
-						childs.Add(new Pair(name, "array", TokensToArray(tokens.GetRange(i + 2, (end2 - (i + 2)) + 1))));
+						childs.Add(new JsonPair(name, JsonType.Array, TokensToArray(tokens.GetRange(i + 2, (end2 - (i + 2)) + 1))));
 						i += 1 + (end2 - (i + 2)) + 1;
 						continue;
 				}
 			}
 
-			return new Pair(null, "object", childs.ToArray());
+			return new JsonPair(null, JsonType.Object, childs.ToArray());
 		}
 
-		private static Pair[] TokensToArray(List<Token> tokens) 
+		private static JsonPair[] TokensToArray(List<Token> tokens) 
 		{
-			List<Pair> childs = new List<Pair>();
+			List<JsonPair> childs = new List<JsonPair>();
 			int start = 0;
 			int end = EndOfScope(tokens, "LSB", "RSB", start);
 
@@ -203,29 +275,29 @@ namespace Utils.Parsers
 					case "COMMA":
 						continue;
 					case "STRING":
-						childs.Add(new Pair(null, "basic", tokens[i].Value.Substring(1, tokens[i].Value.Length - 2)));
+						childs.Add(new JsonPair(null, JsonType.String, tokens[i].Value.Substring(1, tokens[i].Value.Length - 2)));
 						i++;
 						continue;
 					case "NUMBER":
-						childs.Add(new Pair(null, "basic", double.Parse(tokens[i].Value)));
+						childs.Add(new JsonPair(null, JsonType.Number, double.Parse(tokens[i].Value)));
 						i++;
 						continue;
 					case "BOOL":
-						childs.Add(new Pair(null, "basic", bool.Parse(tokens[i].Value)));
+						childs.Add(new JsonPair(null, JsonType.Bool, bool.Parse(tokens[i].Value)));
 						i++;
 						continue;
 					case "NULL":
-						childs.Add(new Pair(null, "null", null));
+						childs.Add(new JsonPair(null, JsonType.Null, null));
 						i++;
 						continue;
 					case "LCB":
 						end2 = EndOfScope(tokens, "LCB", "RCB", i);
-						childs.Add(new Pair(null, "object", GetFirstPair(tokens.GetRange(i, (end2 - (i)) + 1)).Childs));
+						childs.Add(new JsonPair(null, JsonType.Object, GetFirstJsonPair(tokens.GetRange(i, (end2 - (i)) + 1)).Childs));
 						i += (end2 - (i)) + 1;
 						continue;
 					case "LSB":
 						end2 = EndOfScope(tokens, "LSB", "RSB", i);
-						childs.Add(new Pair(null, "array", TokensToArray(tokens.GetRange(i, (end2 - (i)) + 1))));
+						childs.Add(new JsonPair(null, JsonType.Array, TokensToArray(tokens.GetRange(i, (end2 - (i)) + 1))));
 						i += (end2 - (i)) + 1;
 						continue;
 				}
@@ -234,42 +306,6 @@ namespace Utils.Parsers
 			return childs.ToArray();
 		}
 
-		private static string ArrayToString(Array array, int[] coords, int rank, bool prettyPrint, string tab) 
-		{
-			string output = "";
-			string space = (prettyPrint) ? " " : "";
-
-			output += "[" + space;
-			for (coords[rank - 1] = 0; coords[rank - 1] < array.GetLength(rank - 1); coords[rank - 1]++) 
-			{
-				output += (rank + 1 > array.Rank) 
-					? ToJson(array.GetValue(coords), prettyPrint, tab)
-					: ArrayToString(array, coords, rank + 1, prettyPrint, tab)
-				;
-
-				if (coords[rank - 1] < array.GetLength(rank - 1) - 1) { output += "," + space; }
-			}
-			output += space + "]";
-
-			return output;
-		}
-
-		private static bool IsBasic(Type type) 
-		{
-			return
-				type.IsPointer | 
-				type == typeof(bool) | 
-				type == typeof(double) | 
-				type == typeof(decimal) | 
-				type == typeof(float) | 
-				type == typeof(uint) | 
-				type == typeof(int) | 
-				type == typeof(ushort) | 
-				type == typeof(short) | 
-				type == typeof(byte) | 
-				type == typeof(sbyte)
-			;
-		}
 
 		private static int EndOfScope(List<Token> tokens, string lName, string rName, int start) 
 		{
@@ -286,6 +322,7 @@ namespace Utils.Parsers
 			return end;
 		}
 
+		private static bool HasAttribute<T>(MemberInfo info) where T : Attribute => HasAttribute<T>(info, out T attribute);
 		private static bool HasAttribute<T>(MemberInfo info, out T attribute) where T : Attribute
 		{
 			object[] objs = info.GetCustomAttributes(typeof(T), false);
@@ -294,16 +331,37 @@ namespace Utils.Parsers
 			return true;
 		}
 
-		public class Pair 
+		public enum JsonType 
+		{
+			Number,
+			String,
+			Bool,
+			Array,
+			Object,
+			Null,
+		}
+
+		[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+		public sealed class SerializeAttribute : Attribute { public SerializeAttribute() {} }
+
+		[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+		public sealed class DeserializeAttribute : Attribute { public DeserializeAttribute() {} }
+
+		[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+		public sealed class NameAttribute : Attribute
 		{
 			public string Name;
-			public string Type; // basic|null|array|object
+			public NameAttribute(string name) { this.Name = name; }
+		}
+
+		public class JsonPair 
+		{
+			public string Name;
+			public JsonType Type;
 			public object Value;
-			public Pair[] Childs;
+			public JsonPair[] Childs;
 
-			public Pair() {}
-
-			public Pair(string name, string type, object value) 
+			public JsonPair(string name, JsonType type, object value) 
 			{
 				this.Name = name;
 				this.Type = type;
@@ -311,12 +369,40 @@ namespace Utils.Parsers
 				this.Childs = null;
 			}
 
-			public Pair(string name, string type, Pair[] childs) 
+			public JsonPair(string name, JsonType type, JsonPair[] childs) 
 			{
 				this.Name = name;
 				this.Type = type;
 				this.Value = null;
 				this.Childs = childs;
+			}
+		}
+
+		public sealed class Serializer 
+		{
+			public string Type { private set; get; }
+			public Func<object, string> Method { private set; get; }
+
+			public string Invoke(object obj) => this.Method(obj);
+
+			public Serializer(string type, Func<object, string> method) 
+			{
+				this.Type = type;
+				this.Method = method;
+			}
+		}
+
+		public sealed class Deserializer 
+		{
+			public string Type { private set; get; }
+			public Func<Type, JsonPair[], object> Method { private set; get; }
+
+			public object Invoke(Type type, JsonPair[] elements) => this.Method(type, elements);
+
+			public Deserializer(string type, Func<Type, JsonPair[], object> method) 
+			{
+				this.Type = type;
+				this.Method = method;
 			}
 		}
 	}

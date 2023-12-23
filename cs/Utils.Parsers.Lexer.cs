@@ -7,20 +7,20 @@ namespace Utils.Parsers
 {
 	public static class Lexer 
 	{
-		public static List<Token> Lex(string input, TokenDefinition[] definitions) 
+		public static IEnumerable<Token> Lex(string input, IEnumerable<TokenDefinition> definitions) 
 		{
 			List<Token> tokens = new List<Token>();
 			List<int> indexes = new List<int>();
 
-			for (int i = 0; i < definitions.Length; i++) 
+			foreach (TokenDefinition def in definitions) 
 			{
-				for (Match match = Regex.Match(input, definitions[i].Regex); match.Success; match = match.NextMatch()) 
+				for (Match match = Regex.Match(input, def.Regex); match.Success; match = match.NextMatch()) 
 				{
 					if (string.IsNullOrEmpty(match.Value)) { continue; }
 					indexes.Add(match.Index);
 					tokens.Add(new Token(
-						definitions[i].Name,
-						definitions[i].DefaultValue ?? match.Value
+						def.Name,
+						def.DefaultValue ?? match.Value
 					));
 
 					string substitute = "";
